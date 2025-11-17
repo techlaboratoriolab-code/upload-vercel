@@ -321,18 +321,28 @@ def enviar_xml():
             pacientes_processados = 0
             for pdf_name, pdf_data in pdfs.items():
                 # Extrair número da guia do nome do PDF (ex: 357609997_GUIA_doc1.pdf -> 357609997)
-                numero_guia_pdf = pdf_name.split('_')[0]
+                numero_guia_pdf = pdf_name.split('_')[0].strip()
 
                 # Buscar paciente correspondente
                 paciente_encontrado = None
                 for paciente in pacientes:
-                    guia_prestador = paciente.get('numeroGuiaPrestador', '')
-                    if numero_guia_pdf in guia_prestador or guia_prestador in numero_guia_pdf:
+                    guia_prestador = str(paciente.get('numeroGuiaPrestador', '')).strip()
+                    guia_operadora = str(paciente.get('numeroGuiaOperadora', '')).strip()
+
+                    # Tentar match com número da guia do prestador ou operadora
+                    if (numero_guia_pdf == guia_prestador or
+                        numero_guia_pdf == guia_operadora or
+                        numero_guia_pdf in guia_prestador or
+                        numero_guia_pdf in guia_operadora or
+                        guia_prestador.endswith(numero_guia_pdf) or
+                        guia_operadora.endswith(numero_guia_pdf)):
                         paciente_encontrado = paciente
+                        logger.info(f"✓ Match: PDF {numero_guia_pdf} -> Guia Prestador: {guia_prestador}, Guia Operadora: {guia_operadora}")
                         break
 
                 if not paciente_encontrado:
-                    logger.warning(f"⚠️ Paciente não encontrado para PDF: {pdf_name}")
+                    logger.error(f"❌ Paciente não encontrado para PDF: {pdf_name} (número: {numero_guia_pdf})")
+                    logger.error(f"   Exemplos de guias no XML: {[p.get('numeroGuiaPrestador', 'N/A')[:20] for p in pacientes[:3]]}")
                     resultados_finais.append({
                         'pdf': pdf_name,
                         'status': 'Erro',

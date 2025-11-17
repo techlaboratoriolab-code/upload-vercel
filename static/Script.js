@@ -264,29 +264,60 @@ async function processFiles() {
         
         addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
-        
-        // Processar em lotes de 3 PDFs por vez para evitar erro 413 e timeout
-        const BATCH_SIZE = 3;
-        const totalLotes = Math.ceil(pdfData.length / BATCH_SIZE);
-        
-        addLog(`📦 Dividindo em ${totalLotes} lote(s) de até ${BATCH_SIZE} PDFs cada`, 'info');
-        addLog('📡 Enviando para o servidor...', 'info');
-        
-        let allResults = [];
-        
-        for (let i = 0; i < totalLotes; i++) {
-            const start = i * BATCH_SIZE;
-            const end = Math.min(start + BATCH_SIZE, pdfData.length);
-            const batchPdfs = {};
-            
-            for (let j = start; j < end; j++) {
-                const pdf = pdfData[j];
-                batchPdfs[pdf.name] = pdf.data;
+
+        // Separar PDFs grandes (>1.5MB) e pequenos
+        const MAX_PDF_SIZE = 1.5 * 1024 * 1024; // 1.5MB em bytes
+        const largePdfs = [];
+        const smallPdfs = [];
+
+        pdfData.forEach(pdf => {
+            // Estimar tamanho do Base64 (Base64 é ~33% maior que binário)
+            const estimatedSize = (pdf.data.length * 3) / 4;
+            if (estimatedSize > MAX_PDF_SIZE) {
+                largePdfs.push(pdf);
+            } else {
+                smallPdfs.push(pdf);
             }
+        });
+
+        if (largePdfs.length > 0) {
+            addLog(`⚠️ ${largePdfs.length} PDF(s) grande(s) detectado(s) - serão processados individualmente`, 'warning');
+            largePdfs.forEach(pdf => {
+                const sizeMB = ((pdf.data.length * 3) / 4 / 1024 / 1024).toFixed(2);
+                addLog(`   📄 ${pdf.name} (~${sizeMB} MB)`, 'warning');
+            });
+        }
+
+        // Criar lotes: PDFs grandes individualmente, PDFs pequenos em grupos de 3
+        const batches = [];
+
+        // Adicionar PDFs grandes (um por lote)
+        largePdfs.forEach(pdf => {
+            batches.push([pdf]);
+        });
+
+        // Adicionar PDFs pequenos (3 por lote)
+        const BATCH_SIZE = 3;
+        for (let i = 0; i < smallPdfs.length; i += BATCH_SIZE) {
+            batches.push(smallPdfs.slice(i, i + BATCH_SIZE));
+        }
+
+        addLog(`📦 Dividindo em ${batches.length} lote(s)`, 'info');
+        addLog('📡 Enviando para o servidor...', 'info');
+
+        let allResults = [];
+
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            const batchPdfs = {};
+
+            batch.forEach(pdf => {
+                batchPdfs[pdf.name] = pdf.data;
+            });
             
             addLog('', 'info');
-            addLog(`📤 Enviando lote ${i + 1}/${totalLotes} (${end - start} PDFs)...`, 'warning');
-            statusText.textContent = `Enviando lote ${i + 1}/${totalLotes}...`;
+            addLog(`📤 Enviando lote ${i + 1}/${batches.length} (${batch.length} PDFs)...`, 'warning');
+            statusText.textContent = `Enviando lote ${i + 1}/${batches.length}...`;
             
             const startTime = Date.now();
             let tentativa = 0;
