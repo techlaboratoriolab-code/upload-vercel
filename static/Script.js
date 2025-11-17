@@ -265,8 +265,8 @@ async function processFiles() {
         addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
         
-        // Processar em lotes de 5 PDFs por vez para evitar erro 413
-        const BATCH_SIZE = 5;
+        // Processar em lotes de 3 PDFs por vez para evitar erro 413 e timeout
+        const BATCH_SIZE = 3;
         const totalLotes = Math.ceil(pdfData.length / BATCH_SIZE);
         
         addLog(`📦 Dividindo em ${totalLotes} lote(s) de até ${BATCH_SIZE} PDFs cada`, 'info');
@@ -289,35 +289,60 @@ async function processFiles() {
             statusText.textContent = `Enviando lote ${i + 1}/${totalLotes}...`;
             
             const startTime = Date.now();
-            
-            try {
-                const response = await fetch('/api/enviar', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        xmlFiles: xmlData,
-                        pdfs: batchPdfs
-                    })
-                });
+            let tentativa = 0;
+            const maxTentativas = 2;
+            let sucesso = false;
 
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                
-                if (!response.ok) {
-                    addLog(`❌ Erro no lote ${i + 1}: ${response.status} - ${response.statusText}`, 'error');
-                    throw new Error(`Erro no lote ${i + 1}: ${response.status} - ${response.statusText}`);
+            while (tentativa < maxTentativas && !sucesso) {
+                tentativa++;
+
+                try {
+                    if (tentativa > 1) {
+                        addLog(`   🔄 Tentativa ${tentativa}/${maxTentativas}...`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // Aguarda 2s antes de retry
+                    }
+
+                    const response = await fetch('/api/enviar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            xmlFiles: xmlData,
+                            pdfs: batchPdfs
+                        })
+                    });
+
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                    if (!response.ok) {
+                        const errorText = await response.text().catch(() => response.statusText);
+                        addLog(`❌ Erro no lote ${i + 1}: ${response.status} - ${errorText}`, 'error');
+
+                        if (tentativa < maxTentativas) {
+                            continue; // Tenta novamente
+                        }
+                        throw new Error(`Erro no lote ${i + 1}: ${response.status} - ${errorText}`);
+                    }
+
+                    const result = await response.json();
+                    allResults.push(...result.resultados);
+
+                    const sucessos = result.resumo?.sucessos || 0;
+                    const erros = result.resumo?.erros || 0;
+
+                    addLog(`✅ Lote ${i + 1} processado em ${elapsed}s`, 'success');
+                    addLog(`   ✓ Sucesso: ${sucessos} | ✗ Erros: ${erros}`, 'info');
+                    sucesso = true;
+
+                } catch (error) {
+                    if (tentativa >= maxTentativas) {
+                        addLog(`❌ Falha no lote ${i + 1} após ${maxTentativas} tentativas: ${error.message}`, 'error');
+                        addLog(`⚠️ Continuando com próximo lote...`, 'warning');
+                        // Não lança erro, continua com próximo lote
+                        break;
+                    }
                 }
-
-                const result = await response.json();
-                allResults.push(...result.resultados);
-                
-                addLog(`✅ Lote ${i + 1} processado em ${elapsed}s`, 'success');
-                addLog(`   ✓ Sucesso: ${result.sucesso} | ✗ Erros: ${result.erros}`, 'info');
-                
-            } catch (error) {
-                addLog(`❌ Falha no lote ${i + 1}: ${error.message}`, 'error');
-                throw error;
             }
         }
         
