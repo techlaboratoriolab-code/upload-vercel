@@ -261,6 +261,83 @@
             color: var(--error-red); 
         }
 
+        #logConsole {
+            display: none;
+            margin-top: 20px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d4d4d4;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #logConsole.active {
+            display: block;
+        }
+
+        #logConsole .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        #logConsole .log-header h3 {
+            margin: 0;
+            color: #4ec9b0;
+            font-size: 16px;
+        }
+
+        #logConsole .clear-btn {
+            background: #d73a49;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #logConsole .clear-btn:hover {
+            background: #cb2431;
+        }
+
+        #logContent {
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+
+        .log-info {
+            color: #4fc3f7;
+        }
+
+        .log-success {
+            color: #4caf50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
         @keyframes spin { 
             0% { transform: rotate(0deg); } 
             100% { transform: rotate(360deg); } 
@@ -313,6 +390,14 @@
         <div id="statusSection">
             <div class="spinner"></div>
             <p id="statusText">Processando...</p>
+        </div>
+
+        <div id="logConsole">
+            <div class="log-header">
+                <h3>📊 Console de Logs</h3>
+                <button class="clear-btn" onclick="clearLogs()">🗑️ Limpar</button>
+            </div>
+            <div id="logContent"></div>
         </div>
 
         <div id="resultsSection">

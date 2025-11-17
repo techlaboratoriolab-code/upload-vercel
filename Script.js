@@ -7,9 +7,28 @@ const statusSection = document.getElementById('statusSection');
 const statusText = document.getElementById('statusText');
 const resultsSection = document.getElementById('resultsSection');
 const resultsContent = document.getElementById('resultsContent');
+const logConsole = document.getElementById('logConsole');
+const logContent = document.getElementById('logContent');
 
 // Estado da aplicação
 let selectedFiles = [];
+
+// Funções de Log
+function addLog(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString('pt-BR');
+    const logLine = document.createElement('div');
+    logLine.className = `log-line log-${type}`;
+    logLine.innerHTML = `<span class="log-timestamp">[${timestamp}]</span>${message}`;
+    logContent.appendChild(logLine);
+    logContent.scrollTop = logContent.scrollHeight; // Auto-scroll
+}
+
+function clearLogs() {
+    logContent.innerHTML = '';
+    addLog('Console limpo', 'info');
+}
+
+window.clearLogs = clearLogs;
 
 // Event Listeners
 uploadArea.addEventListener('click', () => fileInput.click());
@@ -46,6 +65,7 @@ function addFiles(files) {
         
         if (!isXML) {
             alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML são permitidos.\n\n💡 Os PDFs serão buscados automaticamente do Google Drive.`);
+            addLog(`❌ Arquivo rejeitado: ${file.name} (formato inválido)`, 'error');
             return false;
         }
         
@@ -53,9 +73,11 @@ function addFiles(files) {
         const alreadyAdded = selectedFiles.some(f => f.name === file.name && f.size === file.size);
         if (alreadyAdded) {
             alert(`⚠️ O arquivo "${file.name}" já foi adicionado.`);
+            addLog(`⚠️ Arquivo duplicado: ${file.name}`, 'warning');
             return false;
         }
         
+        addLog(`✅ Arquivo adicionado: ${file.name} (${formatFileSize(file.size)})`, 'success');
         return true;
     });
     
@@ -67,7 +89,9 @@ function addFiles(files) {
 }
 
 function removeFile(index) {
+    const fileName = selectedFiles[index].name;
     selectedFiles.splice(index, 1);
+    addLog(`🗑️ Arquivo removido: ${fileName}`, 'warning');
     renderFileList();
     updateProcessButton();
 }
@@ -142,33 +166,56 @@ function formatFileSize(bytes) {
 async function processFiles() {
     if (selectedFiles.length === 0) return;
 
-    // Mostrar status de processamento
+    // Mostrar console de logs e status
+    logConsole.classList.add('active');
     statusSection.classList.add('active');
     resultsSection.classList.remove('active');
     processBtn.disabled = true;
+    
+    addLog('='.repeat(60), 'info');
+    addLog('🚀 INICIANDO PROCESSAMENTO', 'info');
+    addLog('='.repeat(60), 'info');
+    addLog(`📂 Total de arquivos XML: ${selectedFiles.length}`, 'info');
+    
     statusText.textContent = 'Preparando arquivos XML...';
 
     try {
+        addLog('📖 Lendo arquivos XML...', 'info');
         statusText.textContent = 'Lendo arquivos XML...';
         
         // Ler todos os XMLs
-        const xmlPromises = selectedFiles.map(file => {
+        const xmlPromises = selectedFiles.map((file, index) => {
+            addLog(`  📄 Lendo: ${file.name}`, 'info');
             return new Promise((resolve) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve({
-                    name: file.name,
-                    content: e.target.result
-                });
+                reader.onload = (e) => {
+                    addLog(`  ✅ Lido: ${file.name} (${formatFileSize(e.target.result.length)})`, 'success');
+                    resolve({
+                        name: file.name,
+                        content: e.target.result
+                    });
+                };
+                reader.onerror = () => {
+                    addLog(`  ❌ Erro ao ler: ${file.name}`, 'error');
+                    resolve(null);
+                };
                 reader.readAsText(file);
             });
         });
 
-        const xmlFiles = await Promise.all(xmlPromises);
+        const xmlFiles = (await Promise.all(xmlPromises)).filter(f => f !== null);
+        
+        addLog(`✅ ${xmlFiles.length} arquivos XML lidos com sucesso`, 'success');
+        addLog('', 'info');
+        addLog('📡 Enviando para o servidor...', 'info');
+        addLog('💡 PDFs serão buscados automaticamente em: G:\\Meu Drive\\pdfs orizon', 'warning');
         
         statusText.textContent = 'Enviando para processamento...';
-        statusText.textContent += '\n💡 Os PDFs serão buscados automaticamente do Google Drive';
 
         // Fazer requisição para o backend
+        const startTime = Date.now();
+        addLog('⏱️ Aguardando resposta do servidor...', 'info');
+        
         const response = await fetch('/api/enviar', {
             method: 'POST',
             headers: {
@@ -179,17 +226,33 @@ async function processFiles() {
             })
         });
 
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        
         if (!response.ok) {
+            addLog(`❌ Erro na requisição HTTP: ${response.status} - ${response.statusText}`, 'error');
             throw new Error(`Erro na requisição: ${response.status} - ${response.statusText}`);
         }
 
+        addLog(`✅ Resposta recebida em ${elapsed}s`, 'success');
+        addLog('📦 Processando resposta do servidor...', 'info');
+        
         const result = await response.json();
+        
+        addLog('', 'info');
+        addLog('='.repeat(60), 'info');
+        addLog('📊 PROCESSAMENTO CONCLUÍDO', 'success');
+        addLog('='.repeat(60), 'info');
 
         // Mostrar resultados
         displayResults(result);
         
     } catch (error) {
         console.error('Erro ao processar arquivos:', error);
+        addLog('', 'info');
+        addLog('='.repeat(60), 'error');
+        addLog('❌ ERRO CRÍTICO', 'error');
+        addLog('='.repeat(60), 'error');
+        addLog(`Erro: ${error.message}`, 'error');
         displayError(error.message);
     } finally {
         statusSection.classList.remove('active');
@@ -310,4 +373,8 @@ window.removeFile = removeFile;
 
 // Log de inicialização
 console.log('✅ Sistema LAB - Envio Anexos TISS inicializado');
-console.log('📌 Aguardando seleção de arquivos XML e PDF...');
+console.log('📌 Aguardando seleção de arquivos XML...');
+addLog('🚀 Sistema LAB inicializado', 'success');
+addLog('📌 Aguardando seleção de arquivos XML...', 'info');
+addLog('💡 PDFs serão buscados automaticamente do Google Drive', 'info');
+logConsole.classList.add('active');
