@@ -264,44 +264,77 @@ async function processFiles() {
         
         addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
+        
+        // Processar em lotes de 10 PDFs por vez para evitar erro 413
+        const BATCH_SIZE = 10;
+        const totalLotes = Math.ceil(pdfData.length / BATCH_SIZE);
+        
+        addLog(`📦 Dividindo em ${totalLotes} lote(s) de até ${BATCH_SIZE} PDFs cada`, 'info');
         addLog('📡 Enviando para o servidor...', 'info');
         
-        statusText.textContent = 'Enviando para processamento...';
-
-        // Fazer requisição para o backend
-        const startTime = Date.now();
-        addLog('⏱️ Aguardando resposta do servidor...', 'info');
+        let allResults = [];
         
-        const response = await fetch('/api/enviar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                xmlFiles: xmlData,
-                pdfs: pdfs
-            })
-        });
+        for (let i = 0; i < totalLotes; i++) {
+            const start = i * BATCH_SIZE;
+            const end = Math.min(start + BATCH_SIZE, pdfData.length);
+            const batchPdfs = {};
+            
+            for (let j = start; j < end; j++) {
+                const pdf = pdfData[j];
+                batchPdfs[pdf.name] = pdf.data;
+            }
+            
+            addLog('', 'info');
+            addLog(`📤 Enviando lote ${i + 1}/${totalLotes} (${end - start} PDFs)...`, 'warning');
+            statusText.textContent = `Enviando lote ${i + 1}/${totalLotes}...`;
+            
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch('/api/enviar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        xmlFiles: xmlData,
+                        pdfs: batchPdfs
+                    })
+                });
 
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-        
-        if (!response.ok) {
-            addLog(`❌ Erro na requisição HTTP: ${response.status} - ${response.statusText}`, 'error');
-            throw new Error(`Erro na requisição: ${response.status} - ${response.statusText}`);
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                
+                if (!response.ok) {
+                    addLog(`❌ Erro no lote ${i + 1}: ${response.status} - ${response.statusText}`, 'error');
+                    throw new Error(`Erro no lote ${i + 1}: ${response.status} - ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                allResults.push(...result.resultados);
+                
+                addLog(`✅ Lote ${i + 1} processado em ${elapsed}s`, 'success');
+                addLog(`   ✓ Sucesso: ${result.sucesso} | ✗ Erros: ${result.erros}`, 'info');
+                
+            } catch (error) {
+                addLog(`❌ Falha no lote ${i + 1}: ${error.message}`, 'error');
+                throw error;
+            }
         }
-
-        addLog(`✅ Resposta recebida em ${elapsed}s`, 'success');
-        addLog('📦 Processando resposta do servidor...', 'info');
-        
-        const result = await response.json();
         
         addLog('', 'info');
         addLog('='.repeat(60), 'info');
         addLog('📊 PROCESSAMENTO CONCLUÍDO', 'success');
         addLog('='.repeat(60), 'info');
 
+        // Consolidar resultados
+        const finalResult = {
+            sucesso: allResults.filter(r => r.status === 'sucesso').length,
+            erros: allResults.filter(r => r.status === 'erro').length,
+            resultados: allResults
+        };
+        
         // Mostrar resultados
-        displayResults(result);
+        displayResults(finalResult);
         
     } catch (error) {
         console.error('Erro ao processar arquivos:', error);
