@@ -366,8 +366,6 @@ def enviar_xml():
                     'resultado_envio': resultado_envio,
                     'success': resultado_envio.get('success')
                 })
-                
-                time.sleep(1)
 
         logger.info(f"📊 RESUMO FINAL - ✅ Sucessos: {total_sucessos} | ❌ Erros: {total_erros}")
 
