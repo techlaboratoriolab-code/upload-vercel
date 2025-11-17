@@ -265,8 +265,8 @@ async function processFiles() {
         addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
         
-        // Processar em lotes de 10 PDFs por vez para evitar erro 413
-        const BATCH_SIZE = 10;
+        // Processar em lotes de 5 PDFs por vez para evitar erro 413
+        const BATCH_SIZE = 5;
         const totalLotes = Math.ceil(pdfData.length / BATCH_SIZE);
         
         addLog(`📦 Dividindo em ${totalLotes} lote(s) de até ${BATCH_SIZE} PDFs cada`, 'info');
