@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB - Envio Anexos TISS</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --background-light: #f8f9ff;
+            --border-color: #d1d8ff;
+            --text-dark: #333;
+            --text-light: #666;
+            --success-green: #28a745;
+            --error-red: #dc3545;
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .upload-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            color: var(--text-dark);
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        #uploadArea {
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--background-light);
+            transition: all 0.3s;
+        }
+
+        #uploadArea:hover, #uploadArea.drag-over {
+            background: #f0f2ff;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        #uploadArea h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        #uploadArea p {
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .file-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .badge-xml {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-pdf {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        #fileList {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        #fileList.active { 
+            display: block; 
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--background-light);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: #f0f2ff;
+            border-color: var(--primary-color);
+        }
+
+        .file-info { 
+            display: flex; 
+            align-items: center; 
+            flex: 1;
+        }
+
+        .file-icon { 
+            width: 40px; 
+            height: 40px; 
+            margin-right: 15px; 
+            color: var(--primary-color); 
+        }
+
+        .file-details h4 { 
+            font-size: 14px; 
+            color: var(--text-dark); 
+            margin-bottom: 4px;
+        }
+
+        .file-details p { 
+            font-size: 12px; 
+            color: var(--text-light); 
+        }
+
+        .remove-btn { 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: var(--error-red);
+            padding: 5px;
+            transition: transform 0.2s;
+        }
+
+        .remove-btn:hover {
+            transform: scale(1.2);
+        }
+
+        #processBtn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #processBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #processBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #ccc;
+        }
+
+        #statusSection {
+            text-align: center;
+            padding: 30px;
+            display: none;
+        }
+
+        #statusSection.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        #statusText { 
+            color: var(--primary-color); 
+            font-weight: bold; 
+        }
+
+        #resultsSection {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary-color);
+            display: none;
+        }
+
+        #resultsSection.active {
+            display: block;
+        }
+
+        #resultsSection h3 {
+            margin-bottom: 15px;
+            color: var(--text-dark);
+        }
+
+        #resultsSection ul { 
+            list-style: none; 
+            padding: 0; 
+        }
+
+        #resultsSection li { 
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .success { 
+            color: var(--success-green); 
+        }
+
+        .error { 
+            color: var(--error-red); 
+        }
+
+        #logConsole {
+            display: none;
+            margin-top: 20px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d4d4d4;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #logConsole.active {
+            display: block;
+        }
+
+        #logConsole .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+
+        #logConsole .log-header h3 {
+            margin: 0;
+            color: #4ec9b0;
+            font-size: 16px;
+        }
+
+        #logConsole .clear-btn {
+            background: #d73a49;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #logConsole .clear-btn:hover {
+            background: #cb2431;
+        }
+
+        #logContent {
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+
+        .log-info {
+            color: #4fc3f7;
+        }
+
+        .log-success {
+            color: #4caf50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1976d2;
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: #0d47a1;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 LAB - Envio Anexos TISS</h1>
+        <p class="subtitle">Sistema de processamento de arquivos XML TISS e envio de anexos</p>
+
+        <div class="info-box">
+            <p>📌 <strong>Instruções:</strong></p>
+            <p>• Arraste ou selecione os arquivos XML do lote TISS</p>
+            <p>• Os PDFs serão buscados automaticamente em: <strong>G:\Meu Drive\pdfs orizon</strong></p>
+            <p>• Clique em "Processar e Enviar" para iniciar o envio</p>
+        </div>
+
+        <div class="upload-section">
+            <h3 class="section-title">📄 Adicionar Arquivos XML</h3>
+            <div id="uploadArea">
+                <h3>Arraste os arquivos XML aqui</h3>
+                <p>ou clique para selecionar</p>
+                <div style="margin-top: 10px;">
+                    <span class="file-type-badge badge-xml">Apenas XML</span>
+                </div>
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">💡 PDFs buscados automaticamente do Drive</p>
+                <input type="file" id="fileInput" accept=".xml" multiple hidden>
+            </div>
+        </div>
+
+        <div id="fileList"></div>
+
+        <button id="processBtn" disabled>Processar e Enviar Anexos</button>
+
+        <div id="statusSection">
+            <div class="spinner"></div>
+            <p id="statusText">Processando...</p>
+        </div>
+
+        <div id="logConsole">
+            <div class="log-header">
+                <h3>📊 Console de Logs</h3>
+                <button class="clear-btn" onclick="clearLogs()">🗑️ Limpar</button>
+            </div>
+            <div id="logContent"></div>
+        </div>
+
+        <div id="resultsSection">
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script src="Script.js"></script>
+</body>
+</html>
