@@ -8,8 +8,24 @@ from datetime import datetime
 from xml.etree import ElementTree as ET
 import requests
 import time
+import logging
+from pathlib import Path
 
 app = Flask(__name__, static_folder='static', static_url_path='')
+
+# Configuração de logs
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('orizon_envio.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Pasta dos PDFs no Google Drive
+PDF_FOLDER = r"G:\Meu Drive\pdfs orizon"
 
 # CORS headers
 @app.after_request
@@ -33,6 +49,7 @@ class OrizonTISSEnvio:
             self.senha_md5 = hashlib.md5(senha_str.encode("utf-8")).hexdigest().lower()
         
         self.registro_ans = registro_ans
+        logger.info(f"OrizonTISSEnvio inicializado - Prestador: {codigo_prestador}, Login: {login}")
         
     def criar_xml_envio(self, numero_lote, numero_protocolo, numero_guia_prestador, 
                         numero_guia_operadora, numero_documento, pdf_base64, 
@@ -40,6 +57,8 @@ class OrizonTISSEnvio:
         agora = datetime.now()
         data_registro = agora.strftime("%Y-%m-%d")
         hora_registro = agora.strftime("%H:%M:%S")
+        
+        logger.info(f"Criando XML de envio - Lote: {numero_lote}, Guia Prestador: {numero_guia_prestador}")
         
         xml_str = f"""<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -92,6 +111,8 @@ xmlns:xd="http://www.w3.org/2000/09/xmldsig#">
                         numero_guia_operadora, numero_documento, pdf_base64,
                         natureza_guia="2", tipo_documento="01", observacao="", max_tentativas=3):
         
+        logger.info(f"Iniciando envio - Guia: {numero_guia_prestador}, Documento: {numero_documento}")
+        
         xml_string = self.criar_xml_envio(
             numero_lote=numero_lote,
             numero_protocolo=numero_protocolo,
@@ -113,6 +134,7 @@ xmlns:xd="http://www.w3.org/2000/09/xmldsig#">
         for tentativa in range(1, max_tentativas + 1):
             try:
                 if tentativa > 1:
+                    logger.warning(f"Tentativa {tentativa} de {max_tentativas} - Guia: {numero_guia_prestador}")
                     time.sleep(2)
 
                 response = requests.post(
@@ -121,6 +143,11 @@ xmlns:xd="http://www.w3.org/2000/09/xmldsig#">
                     headers=headers,
                     timeout=120
                 )
+
+                if response.status_code == 200:
+                    logger.info(f"✅ Envio bem-sucedido - Guia: {numero_guia_prestador}, Status: {response.status_code}")
+                else:
+                    logger.error(f"❌ Erro no envio - Guia: {numero_guia_prestador}, Status: {response.status_code}")
 
                 return {
                     'success': response.status_code == 200,
@@ -131,8 +158,10 @@ xmlns:xd="http://www.w3.org/2000/09/xmldsig#">
 
             except Exception as e:
                 ultimo_erro = str(e)[:100]
+                logger.error(f"Erro na tentativa {tentativa} - Guia: {numero_guia_prestador} - {ultimo_erro}")
                 continue
 
+        logger.error(f"❌ Falha após {max_tentativas} tentativas - Guia: {numero_guia_prestador}")
         return {
             'success': False,
             'error': f'Falhou após {max_tentativas} tentativas. Último erro: {ultimo_erro}',
@@ -148,10 +177,13 @@ class ProcessadorXMLTISS:
     def extrair_pacientes(self):
         try:
             root = ET.fromstring(self.xml_content)
+            logger.info("XML parseado com sucesso")
         except Exception as e:
+            logger.error(f"Erro ao parsear XML: {str(e)}")
             return {'error': f'Erro ao processar XML: {str(e)}'}
         
         numero_lote = self._extrair_texto(root, './/numeroLote')
+        logger.info(f"Número do lote extraído: {numero_lote}")
         
         guias_encontradas = []
         elementos_processados = set()
@@ -172,9 +204,12 @@ class ProcessadorXMLTISS:
                     guias_encontradas.append(elem)
                     elementos_processados.add(id(elem))
         
-        for guia in guias_encontradas:
+        logger.info(f"Total de guias encontradas: {len(guias_encontradas)}")
+        
+        for i, guia in enumerate(guias_encontradas, 1):
             paciente = self._extrair_dados_guia(guia, numero_lote)
             if paciente:
+                logger.info(f"Paciente {i} extraído - Guia: {paciente.get('numeroGuiaPrestador', 'N/A')}, Nome: {paciente.get('nome', 'N/A')}")
                 self.pacientes.append(paciente)
         
         return self.pacientes
@@ -231,6 +266,44 @@ class ProcessadorXMLTISS:
         
         return None
 
+
+def buscar_pdf_no_drive(numero_guia_prestador):
+    """
+    Busca o PDF correspondente na pasta do Google Drive
+    """
+    try:
+        logger.info(f"Buscando PDF para guia: {numero_guia_prestador}")
+        
+        if not os.path.exists(PDF_FOLDER):
+            logger.error(f"❌ Pasta não encontrada: {PDF_FOLDER}")
+            return None
+        
+        # Padrão esperado: numeroguia_GUIA_doc1.pdf
+        pdf_filename = f"{numero_guia_prestador}_GUIA_doc1.pdf"
+        pdf_path = os.path.join(PDF_FOLDER, pdf_filename)
+        
+        if os.path.exists(pdf_path):
+            logger.info(f"✅ PDF encontrado: {pdf_filename}")
+            with open(pdf_path, 'rb') as f:
+                return f.read()
+        
+        # Busca alternativa - qualquer arquivo que contenha o número da guia
+        logger.warning(f"PDF padrão não encontrado, buscando alternativas para: {numero_guia_prestador}")
+        for arquivo in os.listdir(PDF_FOLDER):
+            if arquivo.lower().endswith('.pdf') and numero_guia_prestador in arquivo:
+                pdf_path = os.path.join(PDF_FOLDER, arquivo)
+                logger.info(f"✅ PDF alternativo encontrado: {arquivo}")
+                with open(pdf_path, 'rb') as f:
+                    return f.read()
+        
+        logger.error(f"❌ PDF não encontrado para guia: {numero_guia_prestador}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar PDF: {str(e)}")
+        return None
+
+
 CODIGO_PRESTADOR = os.environ.get('ORIZON_CODIGO_PRESTADOR', '0000263036')
 LOGIN = os.environ.get('ORIZON_LOGIN', 'LAB0186')
 SENHA = os.environ.get('ORIZON_SENHA', '91a2ab8fbdd7884f7e32fd19694712a0')
@@ -238,54 +311,73 @@ REGISTRO_ANS = os.environ.get('ORIZON_REGISTRO_ANS', '005711')
 
 @app.route('/', methods=['GET'])
 def home():
-    return app.send_static_file('index.html') # Busca em 'static/index.html'
+    return app.send_static_file('index.html')
 
-@app.route('/api/process', methods=['POST', 'OPTIONS'])
-def process_xml():
+@app.route('/api/enviar', methods=['POST', 'OPTIONS'])
+def enviar_xml():
     if request.method == 'OPTIONS':
         return '', 204
     
     try:
-        files = request.files.getlist('files')
-        xml_files = [f for f in files if f.filename.lower().endswith('.xml')]
-        pdf_files = {f.filename: f for f in files if f.filename.lower().endswith('.pdf')}
-
+        logger.info("=" * 80)
+        logger.info("🚀 INICIANDO NOVO PROCESSAMENTO")
+        logger.info("=" * 80)
+        
+        data = request.get_json()
+        xml_files = data.get('xmlFiles', [])
+        
         if not xml_files:
+            logger.error("❌ Nenhum arquivo XML enviado")
             return jsonify({'error': 'Nenhum arquivo XML enviado'}), 400
+
+        logger.info(f"📂 Total de XMLs recebidos: {len(xml_files)}")
 
         cliente_orizon = OrizonTISSEnvio(CODIGO_PRESTADOR, LOGIN, SENHA, REGISTRO_ANS)
         resultados_finais = []
+        total_sucessos = 0
+        total_erros = 0
 
-        for xml_file in xml_files:
-            xml_content = xml_file.read().decode('utf-8')
+        for idx, xml_data in enumerate(xml_files, 1):
+            logger.info(f"\n📄 Processando XML {idx}/{len(xml_files)}: {xml_data.get('name', 'sem nome')}")
+            
+            xml_content = xml_data.get('content', '')
             processador = ProcessadorXMLTISS(xml_content)
             pacientes = processador.extrair_pacientes()
 
             if isinstance(pacientes, dict) and 'error' in pacientes:
-                resultados_finais.append({'arquivo_xml': xml_file.filename, 'error': pacientes['error']})
+                logger.error(f"❌ Erro no XML: {pacientes['error']}")
+                resultados_finais.append({
+                    'arquivo_xml': xml_data.get('name', 'desconhecido'),
+                    'error': pacientes['error']
+                })
+                total_erros += 1
                 continue
 
-            for paciente in pacientes:
+            logger.info(f"👥 Total de pacientes encontrados: {len(pacientes)}")
+
+            for i, paciente in enumerate(pacientes, 1):
                 guia_prestador = paciente.get('numeroGuiaPrestador', '')
-                pdf_encontrado = None
+                logger.info(f"\n--- Processando paciente {i}/{len(pacientes)} ---")
+                logger.info(f"👤 Nome: {paciente.get('nome', 'N/A')}")
+                logger.info(f"🔢 Guia Prestador: {guia_prestador}")
+                logger.info(f"🏥 Guia Operadora: {paciente.get('numeroGuiaOperadora', 'N/A')}")
                 
-                # Busca o PDF correspondente
-                pdf_filename_esperado = f"{guia_prestador}_GUIA_doc1.pdf"
-                if pdf_filename_esperado in pdf_files:
-                    pdf_encontrado = pdf_files[pdf_filename_esperado]
-                else: # Busca alternativa
-                    for fname, fobj in pdf_files.items():
-                        if guia_prestador in fname:
-                            pdf_encontrado = fobj
-                            break
+                # Busca PDF no Google Drive
+                pdf_content = buscar_pdf_no_drive(guia_prestador)
                 
-                if not pdf_encontrado:
-                    resultados_finais.append({'paciente': paciente, 'status': 'Erro', 'error': 'PDF não encontrado'})
+                if not pdf_content:
+                    logger.error(f"❌ PDF não encontrado para guia: {guia_prestador}")
+                    resultados_finais.append({
+                        'paciente': paciente,
+                        'status': 'Erro',
+                        'error': f'PDF não encontrado no Drive para guia {guia_prestador}',
+                        'success': False
+                    })
+                    total_erros += 1
                     continue
 
-                pdf_content = pdf_encontrado.read()
                 pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-                pdf_encontrado.seek(0) # Reseta o ponteiro do arquivo
+                logger.info(f"📎 PDF convertido para Base64 - Tamanho: {len(pdf_base64)} caracteres")
 
                 resultado_envio = cliente_orizon.enviar_documento(
                     numero_lote=paciente.get('numeroLote', ''),
@@ -295,13 +387,40 @@ def process_xml():
                     numero_documento=paciente.get('numeroDocumento', ''),
                     pdf_base64=pdf_base64
                 )
-                resultados_finais.append({'paciente': paciente, 'resultado_envio': resultado_envio})
-                time.sleep(1) # Pausa para não sobrecarregar o serviço
+                
+                if resultado_envio.get('success'):
+                    total_sucessos += 1
+                    logger.info(f"✅ Sucesso no envio da guia {guia_prestador}")
+                else:
+                    total_erros += 1
+                    logger.error(f"❌ Falha no envio da guia {guia_prestador}")
+                
+                resultados_finais.append({
+                    'paciente': paciente,
+                    'resultado_envio': resultado_envio,
+                    'success': resultado_envio.get('success')
+                })
+                
+                time.sleep(1)
 
-        return jsonify({'success': True, 'resultados': resultados_finais})
+        logger.info("\n" + "=" * 80)
+        logger.info(f"📊 RESUMO FINAL - ✅ Sucessos: {total_sucessos} | ❌ Erros: {total_erros}")
+        logger.info("=" * 80 + "\n")
+
+        return jsonify({
+            'success': True,
+            'resultados': resultados_finais,
+            'resumo': {
+                'total': len(resultados_finais),
+                'sucessos': total_sucessos,
+                'erros': total_erros
+            }
+        })
         
     except Exception as e:
+        logger.error(f"❌ ERRO CRÍTICO: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    logger.info("🚀 Servidor Flask iniciado")
     app.run(debug=True)
