@@ -43,10 +43,9 @@ function handleFileSelect(e) {
 function addFiles(files) {
     const validFiles = files.filter(file => {
         const isXML = file.name.toLowerCase().endsWith('.xml');
-        const isPDF = file.name.toLowerCase().endsWith('.pdf');
         
-        if (!isXML && !isPDF) {
-            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas XML e PDF são permitidos.`);
+        if (!isXML) {
+            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML são permitidos.\n\n💡 Os PDFs serão buscados automaticamente do Google Drive.`);
             return false;
         }
         
@@ -74,20 +73,17 @@ function removeFile(index) {
 }
 
 function updateProcessButton() {
-    // Verificar se há pelo menos 1 XML e 1 PDF
+    // Verificar se há pelo menos 1 XML
     const hasXML = selectedFiles.some(f => f.name.toLowerCase().endsWith('.xml'));
-    const hasPDF = selectedFiles.some(f => f.name.toLowerCase().endsWith('.pdf'));
     
-    processBtn.disabled = !(hasXML && hasPDF);
+    processBtn.disabled = !hasXML;
     
-    if (selectedFiles.length > 0 && !hasXML) {
-        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo XML';
-    } else if (selectedFiles.length > 0 && !hasPDF) {
-        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo PDF';
-    } else if (hasXML && hasPDF) {
-        processBtn.textContent = '✨ Processar e Enviar Anexos';
-    } else {
+    if (selectedFiles.length === 0) {
         processBtn.textContent = 'Processar e Enviar Anexos';
+    } else if (hasXML) {
+        processBtn.textContent = `✨ Processar ${selectedFiles.length} arquivo(s) XML`;
+    } else {
+        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo XML';
     }
 }
 
@@ -100,27 +96,14 @@ function renderFileList() {
 
     fileList.classList.add('active');
     
-    // Separar arquivos por tipo
-    const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
-    const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    let html = '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + selectedFiles.length + ')</strong></div>';
+    html += '<div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 8px; font-size: 13px; color: #1976d2;">';
+    html += '💡 Os PDFs serão buscados automaticamente em: <strong>G:\\Meu Drive\\pdfs orizon</strong>';
+    html += '</div>';
     
-    let html = '';
-    
-    if (xmlFiles.length > 0) {
-        html += '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + xmlFiles.length + ')</strong></div>';
-        xmlFiles.forEach((file, index) => {
-            const globalIndex = selectedFiles.indexOf(file);
-            html += createFileItem(file, globalIndex, '#1976d2');
-        });
-    }
-    
-    if (pdfFiles.length > 0) {
-        html += '<div style="margin: 20px 0 15px;"><strong style="color: #c62828;">📎 Arquivos PDF (' + pdfFiles.length + ')</strong></div>';
-        pdfFiles.forEach((file, index) => {
-            const globalIndex = selectedFiles.indexOf(file);
-            html += createFileItem(file, globalIndex, '#c62828');
-        });
-    }
+    selectedFiles.forEach((file, index) => {
+        html += createFileItem(file, index, '#1976d2');
+    });
     
     fileList.innerHTML = html;
 }
@@ -163,29 +146,27 @@ async function processFiles() {
     statusSection.classList.add('active');
     resultsSection.classList.remove('active');
     processBtn.disabled = true;
-    statusText.textContent = 'Preparando arquivos...';
+    statusText.textContent = 'Preparando arquivos XML...';
 
     try {
-        // Separar XML e PDFs
-        const xmlFile = selectedFiles.find(f => f.name.toLowerCase().endsWith('.xml'));
-        const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+        statusText.textContent = 'Lendo arquivos XML...';
+        
+        // Ler todos os XMLs
+        const xmlPromises = selectedFiles.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve({
+                    name: file.name,
+                    content: e.target.result
+                });
+                reader.readAsText(file);
+            });
+        });
 
-        if (!xmlFile) {
-            throw new Error('Nenhum arquivo XML encontrado');
-        }
-
-        statusText.textContent = 'Lendo arquivo XML...';
-        const xmlContent = await readFileAsText(xmlFile);
-
-        statusText.textContent = 'Convertendo PDFs para Base64...';
-        const pdfsDict = {};
-        for (let i = 0; i < pdfFiles.length; i++) {
-            statusText.textContent = `Convertendo PDF ${i + 1} de ${pdfFiles.length}...`;
-            const base64 = await readFileAsBase64(pdfFiles[i]);
-            pdfsDict[pdfFiles[i].name] = base64.split(',')[1]; // Remove data:application/pdf;base64,
-        }
-
+        const xmlFiles = await Promise.all(xmlPromises);
+        
         statusText.textContent = 'Enviando para processamento...';
+        statusText.textContent += '\n💡 Os PDFs serão buscados automaticamente do Google Drive';
 
         // Fazer requisição para o backend
         const response = await fetch('/api/enviar', {
@@ -194,8 +175,7 @@ async function processFiles() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                xml_content: xmlContent,
-                pdfs: pdfsDict
+                xmlFiles: xmlFiles
             })
         });
 
@@ -243,17 +223,26 @@ function displayResults(result) {
     resultsContent.innerHTML = '';
 
     if (result.success && result.resultados) {
-        let html = '<h3>📊 Resultados do Processamento</h3>';
-        
-        const sucessos = result.sucessos || 0;
-        const falhas = result.falhas || 0;
-        const total = result.total || result.resultados.length;
+        const resumo = result.resumo || {};
+        const sucessos = resumo.sucessos || 0;
+        const erros = resumo.erros || 0;
+        const total = resumo.total || result.resultados.length;
 
-        html += `
-            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <p><strong>Total de guias:</strong> ${total}</p>
-                <p style="color: var(--success-green);"><strong>✅ Sucessos:</strong> ${sucessos}</p>
-                <p style="color: var(--error-red);"><strong>❌ Falhas:</strong> ${falhas}</p>
+        let html = `
+            <h3 style="margin-bottom: 20px;">📊 Resultados do Processamento</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px; text-align: center; color: white;">
+                    <div style="font-size: 32px; font-weight: bold;">${total}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Total</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); padding: 20px; border-radius: 8px; text-align: center; color: white;">
+                    <div style="font-size: 32px; font-weight: bold;">✅ ${sucessos}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Sucessos</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); padding: 20px; border-radius: 8px; text-align: center; color: white;">
+                    <div style="font-size: 32px; font-weight: bold;">❌ ${erros}</div>
+                    <div style="font-size: 14px; opacity: 0.9;">Erros</div>
+                </div>
             </div>
         `;
 
@@ -261,22 +250,24 @@ function displayResults(result) {
         
         result.resultados.forEach(res => {
             const pac = res.paciente || {};
-            const status = res.status || '';
-            const isSuccess = res.success;
+            const resultado_envio = res.resultado_envio || {};
+            const isSuccess = resultado_envio.success;
+            const errorMsg = res.error || resultado_envio.error || '';
 
             if (isSuccess) {
                 html += `
                     <li class="success">
                         ✅ <strong>Guia ${pac.numeroGuiaPrestador || 'N/A'}</strong><br>
-                        <small>Carteirinha: ${pac.carteirinha || 'N/A'} | ${status}</small>
+                        <small>👤 ${pac.nome || 'N/A'} | 🎫 Carteirinha: ${pac.carteirinha || 'N/A'}</small><br>
+                        <small style="color: #48bb78;">Status: ${resultado_envio.status_code} | Tentativas: ${resultado_envio.tentativas || 1}</small>
                     </li>
                 `;
             } else {
-                const errorMsg = res.error || status || 'Erro desconhecido';
                 html += `
                     <li class="error">
                         ❌ <strong>Guia ${pac.numeroGuiaPrestador || 'N/A'}</strong><br>
-                        <small>Erro: ${errorMsg}</small>
+                        <small>👤 ${pac.nome || 'N/A'} | 🎫 Carteirinha: ${pac.carteirinha || 'N/A'}</small><br>
+                        <small style="color: #f56565;">Erro: ${errorMsg}</small>
                     </li>
                 `;
             }

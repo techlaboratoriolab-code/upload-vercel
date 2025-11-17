@@ -288,21 +288,21 @@
 
         <div class="info-box">
             <p>📌 <strong>Instruções:</strong></p>
-            <p>• Arraste ou selecione o arquivo XML do lote TISS</p>
-            <p>• Adicione os PDFs correspondentes às guias</p>
+            <p>• Arraste ou selecione os arquivos XML do lote TISS</p>
+            <p>• Os PDFs serão buscados automaticamente em: <strong>G:\Meu Drive\pdfs orizon</strong></p>
             <p>• Clique em "Processar e Enviar" para iniciar o envio</p>
         </div>
 
         <div class="upload-section">
-            <h3 class="section-title">📄 Adicionar Arquivos</h3>
+            <h3 class="section-title">📄 Adicionar Arquivos XML</h3>
             <div id="uploadArea">
-                <h3>Arraste os arquivos aqui</h3>
+                <h3>Arraste os arquivos XML aqui</h3>
                 <p>ou clique para selecionar</p>
                 <div style="margin-top: 10px;">
-                    <span class="file-type-badge badge-xml">XML</span>
-                    <span class="file-type-badge badge-pdf">PDF</span>
+                    <span class="file-type-badge badge-xml">Apenas XML</span>
                 </div>
-                <input type="file" id="fileInput" accept=".xml,.pdf" multiple hidden>
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">💡 PDFs buscados automaticamente do Drive</p>
+                <input type="file" id="fileInput" accept=".xml" multiple hidden>
             </div>
         </div>
 
