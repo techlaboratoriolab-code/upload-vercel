@@ -424,3 +424,6 @@ def enviar_xml():
 if __name__ == '__main__':
     logger.info("🚀 Servidor Flask iniciado")
     app.run(debug=True)
+
+# Para Vercel
+app = app
