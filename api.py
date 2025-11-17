@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os
 import io
 import base64
@@ -11,21 +11,11 @@ import time
 import logging
 from pathlib import Path
 
-app = Flask(__name__, static_folder='static', static_url_path='')
+app = Flask(__name__)
 
-# Configuração de logs
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('orizon_envio.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Configuração de logs simplificada para Vercel
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Pasta dos PDFs no Google Drive
-PDF_FOLDER = r"G:\Meu Drive\pdfs orizon"
 
 # CORS headers
 @app.after_request
@@ -267,43 +257,6 @@ class ProcessadorXMLTISS:
         return None
 
 
-def buscar_pdf_no_drive(numero_guia_prestador):
-    """
-    Busca o PDF correspondente na pasta do Google Drive
-    """
-    try:
-        logger.info(f"Buscando PDF para guia: {numero_guia_prestador}")
-        
-        if not os.path.exists(PDF_FOLDER):
-            logger.error(f"❌ Pasta não encontrada: {PDF_FOLDER}")
-            return None
-        
-        # Padrão esperado: numeroguia_GUIA_doc1.pdf
-        pdf_filename = f"{numero_guia_prestador}_GUIA_doc1.pdf"
-        pdf_path = os.path.join(PDF_FOLDER, pdf_filename)
-        
-        if os.path.exists(pdf_path):
-            logger.info(f"✅ PDF encontrado: {pdf_filename}")
-            with open(pdf_path, 'rb') as f:
-                return f.read()
-        
-        # Busca alternativa - qualquer arquivo que contenha o número da guia
-        logger.warning(f"PDF padrão não encontrado, buscando alternativas para: {numero_guia_prestador}")
-        for arquivo in os.listdir(PDF_FOLDER):
-            if arquivo.lower().endswith('.pdf') and numero_guia_prestador in arquivo:
-                pdf_path = os.path.join(PDF_FOLDER, arquivo)
-                logger.info(f"✅ PDF alternativo encontrado: {arquivo}")
-                with open(pdf_path, 'rb') as f:
-                    return f.read()
-        
-        logger.error(f"❌ PDF não encontrado para guia: {numero_guia_prestador}")
-        return None
-        
-    except Exception as e:
-        logger.error(f"Erro ao buscar PDF: {str(e)}")
-        return None
-
-
 CODIGO_PRESTADOR = os.environ.get('ORIZON_CODIGO_PRESTADOR', '0000263036')
 LOGIN = os.environ.get('ORIZON_LOGIN', 'LAB0186')
 SENHA = os.environ.get('ORIZON_SENHA', '91a2ab8fbdd7884f7e32fd19694712a0')
@@ -311,7 +264,15 @@ REGISTRO_ANS = os.environ.get('ORIZON_REGISTRO_ANS', '005711')
 
 @app.route('/', methods=['GET'])
 def home():
-    return app.send_static_file('index.html')
+    # Para Vercel, servir o index.html da raiz
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>', methods=['GET'])
+def serve_static(path):
+    # Servir arquivos estáticos (Script.js, etc)
+    if os.path.exists(path):
+        return send_from_directory('.', path)
+    return "File not found", 404
 
 @app.route('/api/enviar', methods=['POST', 'OPTIONS'])
 def enviar_xml():
@@ -319,18 +280,18 @@ def enviar_xml():
         return '', 204
     
     try:
-        logger.info("=" * 80)
         logger.info("🚀 INICIANDO NOVO PROCESSAMENTO")
-        logger.info("=" * 80)
         
         data = request.get_json()
         xml_files = data.get('xmlFiles', [])
+        pdfs = data.get('pdfs', {})
         
         if not xml_files:
             logger.error("❌ Nenhum arquivo XML enviado")
             return jsonify({'error': 'Nenhum arquivo XML enviado'}), 400
 
         logger.info(f"📂 Total de XMLs recebidos: {len(xml_files)}")
+        logger.info(f"📎 Total de PDFs recebidos: {len(pdfs)}")
 
         cliente_orizon = OrizonTISSEnvio(CODIGO_PRESTADOR, LOGIN, SENHA, REGISTRO_ANS)
         resultados_finais = []
@@ -360,24 +321,29 @@ def enviar_xml():
                 logger.info(f"\n--- Processando paciente {i}/{len(pacientes)} ---")
                 logger.info(f"👤 Nome: {paciente.get('nome', 'N/A')}")
                 logger.info(f"🔢 Guia Prestador: {guia_prestador}")
-                logger.info(f"🏥 Guia Operadora: {paciente.get('numeroGuiaOperadora', 'N/A')}")
                 
-                # Busca PDF no Google Drive
-                pdf_content = buscar_pdf_no_drive(guia_prestador)
+                # Busca PDF nos arquivos enviados
+                pdf_base64 = None
+                pdf_encontrado = False
                 
-                if not pdf_content:
+                # Tentar encontrar PDF correspondente
+                for pdf_name, pdf_data in pdfs.items():
+                    if guia_prestador in pdf_name:
+                        pdf_base64 = pdf_data
+                        pdf_encontrado = True
+                        logger.info(f"📎 PDF encontrado: {pdf_name}")
+                        break
+                
+                if not pdf_encontrado:
                     logger.error(f"❌ PDF não encontrado para guia: {guia_prestador}")
                     resultados_finais.append({
                         'paciente': paciente,
                         'status': 'Erro',
-                        'error': f'PDF não encontrado no Drive para guia {guia_prestador}',
+                        'error': f'PDF não encontrado para guia {guia_prestador}',
                         'success': False
                     })
                     total_erros += 1
                     continue
-
-                pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-                logger.info(f"📎 PDF convertido para Base64 - Tamanho: {len(pdf_base64)} caracteres")
 
                 resultado_envio = cliente_orizon.enviar_documento(
                     numero_lote=paciente.get('numeroLote', ''),
@@ -403,9 +369,7 @@ def enviar_xml():
                 
                 time.sleep(1)
 
-        logger.info("\n" + "=" * 80)
         logger.info(f"📊 RESUMO FINAL - ✅ Sucessos: {total_sucessos} | ❌ Erros: {total_erros}")
-        logger.info("=" * 80 + "\n")
 
         return jsonify({
             'success': True,
@@ -418,12 +382,10 @@ def enviar_xml():
         })
         
     except Exception as e:
-        logger.error(f"❌ ERRO CRÍTICO: {str(e)}", exc_info=True)
+        logger.error(f"❌ ERRO CRÍTICO: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     logger.info("🚀 Servidor Flask iniciado")
     app.run(debug=True)
 
-# Para Vercel
-app = app

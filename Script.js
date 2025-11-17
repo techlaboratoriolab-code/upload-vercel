@@ -62,9 +62,10 @@ function handleFileSelect(e) {
 function addFiles(files) {
     const validFiles = files.filter(file => {
         const isXML = file.name.toLowerCase().endsWith('.xml');
+        const isPDF = file.name.toLowerCase().endsWith('.pdf');
         
-        if (!isXML) {
-            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML são permitidos.\n\n💡 Os PDFs serão buscados automaticamente do Google Drive.`);
+        if (!isXML && !isPDF) {
+            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML e PDF são permitidos.`);
             addLog(`❌ Arquivo rejeitado: ${file.name} (formato inválido)`, 'error');
             return false;
         }
@@ -97,17 +98,22 @@ function removeFile(index) {
 }
 
 function updateProcessButton() {
-    // Verificar se há pelo menos 1 XML
+    // Verificar se há pelo menos 1 XML e 1 PDF
     const hasXML = selectedFiles.some(f => f.name.toLowerCase().endsWith('.xml'));
+    const hasPDF = selectedFiles.some(f => f.name.toLowerCase().endsWith('.pdf'));
     
-    processBtn.disabled = !hasXML;
+    processBtn.disabled = !(hasXML && hasPDF);
     
     if (selectedFiles.length === 0) {
         processBtn.textContent = 'Processar e Enviar Anexos';
-    } else if (hasXML) {
-        processBtn.textContent = `✨ Processar ${selectedFiles.length} arquivo(s) XML`;
-    } else {
+    } else if (!hasXML) {
         processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo XML';
+    } else if (!hasPDF) {
+        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo PDF';
+    } else {
+        const xmlCount = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml')).length;
+        const pdfCount = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf')).length;
+        processBtn.textContent = `✨ Processar ${xmlCount} XML + ${pdfCount} PDF`;
     }
 }
 
@@ -120,14 +126,26 @@ function renderFileList() {
 
     fileList.classList.add('active');
     
-    let html = '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + selectedFiles.length + ')</strong></div>';
-    html += '<div style="margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 8px; font-size: 13px; color: #1976d2;">';
-    html += '💡 Os PDFs serão buscados automaticamente em: <strong>G:\\Meu Drive\\pdfs orizon</strong>';
-    html += '</div>';
+    const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
+    const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
     
-    selectedFiles.forEach((file, index) => {
-        html += createFileItem(file, index, '#1976d2');
-    });
+    let html = '';
+    
+    if (xmlFiles.length > 0) {
+        html += '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + xmlFiles.length + ')</strong></div>';
+        xmlFiles.forEach((file) => {
+            const globalIndex = selectedFiles.indexOf(file);
+            html += createFileItem(file, globalIndex, '#1976d2');
+        });
+    }
+    
+    if (pdfFiles.length > 0) {
+        html += '<div style="margin: 20px 0 15px;"><strong style="color: #c62828;">📎 Arquivos PDF (' + pdfFiles.length + ')</strong></div>';
+        pdfFiles.forEach((file) => {
+            const globalIndex = selectedFiles.indexOf(file);
+            html += createFileItem(file, globalIndex, '#c62828');
+        });
+    }
     
     fileList.innerHTML = html;
 }
@@ -175,16 +193,21 @@ async function processFiles() {
     addLog('='.repeat(60), 'info');
     addLog('🚀 INICIANDO PROCESSAMENTO', 'info');
     addLog('='.repeat(60), 'info');
-    addLog(`📂 Total de arquivos XML: ${selectedFiles.length}`, 'info');
     
-    statusText.textContent = 'Preparando arquivos XML...';
+    const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
+    const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    addLog(`📂 Total de arquivos XML: ${xmlFiles.length}`, 'info');
+    addLog(`📎 Total de arquivos PDF: ${pdfFiles.length}`, 'info');
+    
+    statusText.textContent = 'Preparando arquivos...';
 
     try {
         addLog('📖 Lendo arquivos XML...', 'info');
         statusText.textContent = 'Lendo arquivos XML...';
         
         // Ler todos os XMLs
-        const xmlPromises = selectedFiles.map((file, index) => {
+        const xmlPromises = xmlFiles.map((file) => {
             addLog(`  📄 Lendo: ${file.name}`, 'info');
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -203,12 +226,45 @@ async function processFiles() {
             });
         });
 
-        const xmlFiles = (await Promise.all(xmlPromises)).filter(f => f !== null);
+        const xmlData = (await Promise.all(xmlPromises)).filter(f => f !== null);
         
-        addLog(`✅ ${xmlFiles.length} arquivos XML lidos com sucesso`, 'success');
+        addLog(`✅ ${xmlData.length} arquivos XML lidos com sucesso`, 'success');
+        addLog('', 'info');
+        addLog('📎 Convertendo PDFs para Base64...', 'info');
+        statusText.textContent = 'Convertendo PDFs...';
+        
+        // Ler e converter PDFs para Base64
+        const pdfPromises = pdfFiles.map((file) => {
+            addLog(`  📄 Convertendo: ${file.name}`, 'info');
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result.split(',')[1]; // Remove data:application/pdf;base64,
+                    addLog(`  ✅ Convertido: ${file.name}`, 'success');
+                    resolve({
+                        name: file.name,
+                        data: base64
+                    });
+                };
+                reader.onerror = () => {
+                    addLog(`  ❌ Erro ao converter: ${file.name}`, 'error');
+                    resolve(null);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        const pdfData = (await Promise.all(pdfPromises)).filter(f => f !== null);
+        
+        // Criar objeto de PDFs
+        const pdfs = {};
+        pdfData.forEach(pdf => {
+            pdfs[pdf.name] = pdf.data;
+        });
+        
+        addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
         addLog('📡 Enviando para o servidor...', 'info');
-        addLog('💡 PDFs serão buscados automaticamente em: G:\\Meu Drive\\pdfs orizon', 'warning');
         
         statusText.textContent = 'Enviando para processamento...';
 
@@ -222,7 +278,8 @@ async function processFiles() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                xmlFiles: xmlFiles
+                xmlFiles: xmlData,
+                pdfs: pdfs
             })
         });
 
