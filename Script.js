@@ -46,23 +46,49 @@ function addFiles(files) {
         const isPDF = file.name.toLowerCase().endsWith('.pdf');
         
         if (!isXML && !isPDF) {
-            alert(`O arquivo "${file.name}" tem um formato inválido. Apenas XML e PDF são permitidos.`);
+            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas XML e PDF são permitidos.`);
+            return false;
         }
         
-        return isXML || isPDF;
+        // Verificar se o arquivo já foi adicionado
+        const alreadyAdded = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+        if (alreadyAdded) {
+            alert(`⚠️ O arquivo "${file.name}" já foi adicionado.`);
+            return false;
+        }
+        
+        return true;
     });
     
     if (validFiles.length === 0) return;
     
     selectedFiles = [...selectedFiles, ...validFiles];
     renderFileList();
-    processBtn.disabled = selectedFiles.length === 0;
+    updateProcessButton();
 }
 
 function removeFile(index) {
     selectedFiles.splice(index, 1);
     renderFileList();
-    processBtn.disabled = selectedFiles.length === 0;
+    updateProcessButton();
+}
+
+function updateProcessButton() {
+    // Verificar se há pelo menos 1 XML e 1 PDF
+    const hasXML = selectedFiles.some(f => f.name.toLowerCase().endsWith('.xml'));
+    const hasPDF = selectedFiles.some(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    processBtn.disabled = !(hasXML && hasPDF);
+    
+    if (selectedFiles.length > 0 && !hasXML) {
+        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo XML';
+    } else if (selectedFiles.length > 0 && !hasPDF) {
+        processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo PDF';
+    } else if (hasXML && hasPDF) {
+        processBtn.textContent = '✨ Processar e Enviar Anexos';
+    } else {
+        processBtn.textContent = 'Processar e Enviar Anexos';
+    }
 }
 
 function renderFileList() {
@@ -73,10 +99,37 @@ function renderFileList() {
     }
 
     fileList.classList.add('active');
-    fileList.innerHTML = selectedFiles.map((file, index) => `
+    
+    // Separar arquivos por tipo
+    const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
+    const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    let html = '';
+    
+    if (xmlFiles.length > 0) {
+        html += '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + xmlFiles.length + ')</strong></div>';
+        xmlFiles.forEach((file, index) => {
+            const globalIndex = selectedFiles.indexOf(file);
+            html += createFileItem(file, globalIndex, '#1976d2');
+        });
+    }
+    
+    if (pdfFiles.length > 0) {
+        html += '<div style="margin: 20px 0 15px;"><strong style="color: #c62828;">📎 Arquivos PDF (' + pdfFiles.length + ')</strong></div>';
+        pdfFiles.forEach((file, index) => {
+            const globalIndex = selectedFiles.indexOf(file);
+            html += createFileItem(file, globalIndex, '#c62828');
+        });
+    }
+    
+    fileList.innerHTML = html;
+}
+
+function createFileItem(file, index, color) {
+    return `
         <div class="file-item">
             <div class="file-info">
-                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="file-icon" style="color: ${color}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                     <polyline points="13 2 13 9 20 9"></polyline>
                 </svg>
@@ -86,13 +139,13 @@ function renderFileList() {
                 </div>
             </div>
             <button class="remove-btn" title="Remover arquivo" onclick="removeFile(${index})">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
         </div>
-    `).join('');
+    `;
 }
 
 function formatFileSize(bytes) {
@@ -107,28 +160,47 @@ async function processFiles() {
     if (selectedFiles.length === 0) return;
 
     // Mostrar status de processamento
-    statusSection.style.display = 'block';
-    resultsSection.style.display = 'none';
+    statusSection.classList.add('active');
+    resultsSection.classList.remove('active');
     processBtn.disabled = true;
-    statusText.textContent = 'Enviando arquivos...';
+    statusText.textContent = 'Preparando arquivos...';
 
     try {
-        // Criar FormData com os arquivos
-        const formData = new FormData();
-        selectedFiles.forEach((file, index) => {
-            formData.append('files', file);
-        });
+        // Separar XML e PDFs
+        const xmlFile = selectedFiles.find(f => f.name.toLowerCase().endsWith('.xml'));
+        const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
 
-        statusText.textContent = 'Processando...';
+        if (!xmlFile) {
+            throw new Error('Nenhum arquivo XML encontrado');
+        }
+
+        statusText.textContent = 'Lendo arquivo XML...';
+        const xmlContent = await readFileAsText(xmlFile);
+
+        statusText.textContent = 'Convertendo PDFs para Base64...';
+        const pdfsDict = {};
+        for (let i = 0; i < pdfFiles.length; i++) {
+            statusText.textContent = `Convertendo PDF ${i + 1} de ${pdfFiles.length}...`;
+            const base64 = await readFileAsBase64(pdfFiles[i]);
+            pdfsDict[pdfFiles[i].name] = base64.split(',')[1]; // Remove data:application/pdf;base64,
+        }
+
+        statusText.textContent = 'Enviando para processamento...';
 
         // Fazer requisição para o backend
-        const response = await fetch('/api/process', {
+        const response = await fetch('/api/enviar', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                xml_content: xmlContent,
+                pdfs: pdfsDict
+            })
         });
 
         if (!response.ok) {
-            throw new Error(`Erro na requisição: ${response.status}`);
+            throw new Error(`Erro na requisição: ${response.status} - ${response.statusText}`);
         }
 
         const result = await response.json();
@@ -140,54 +212,83 @@ async function processFiles() {
         console.error('Erro ao processar arquivos:', error);
         displayError(error.message);
     } finally {
-        statusSection.style.display = 'none';
+        statusSection.classList.remove('active');
         processBtn.disabled = false;
     }
 }
 
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Erro ao ler arquivo: ' + e.target.error));
+        reader.readAsText(file);
+    });
+}
+
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Erro ao ler arquivo: ' + e.target.error));
+        reader.readAsDataURL(file);
+    });
+}
+
 function displayResults(result) {
-    resultsSection.style.display = 'block';
+    resultsSection.classList.add('active');
     resultsSection.style.borderLeftColor = 'var(--success-green)';
     resultsSection.style.background = '#f0fff4';
     
     resultsContent.innerHTML = '';
 
-    if (result.success && Array.isArray(result.resultados)) {
-        let html = '<ul>';
-        let sucessos = 0;
-        let falhas = 0;
+    if (result.success && result.resultados) {
+        let html = '<h3>📊 Resultados do Processamento</h3>';
+        
+        const sucessos = result.sucessos || 0;
+        const falhas = result.falhas || 0;
+        const total = result.total || result.resultados.length;
 
+        html += `
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <p><strong>Total de guias:</strong> ${total}</p>
+                <p style="color: var(--success-green);"><strong>✅ Sucessos:</strong> ${sucessos}</p>
+                <p style="color: var(--error-red);"><strong>❌ Falhas:</strong> ${falhas}</p>
+            </div>
+        `;
+
+        html += '<ul>';
+        
         result.resultados.forEach(res => {
-            const pac = res.paciente;
-            const envio = res.resultado_envio;
+            const pac = res.paciente || {};
+            const status = res.status || '';
+            const isSuccess = res.success;
 
-            if (envio && envio.success) {
-                sucessos++;
-                html += `<li class="success">✓ Guia <b>${pac.numeroGuiaPrestador || 'N/A'}</b> enviada com sucesso!</li>`;
+            if (isSuccess) {
+                html += `
+                    <li class="success">
+                        ✅ <strong>Guia ${pac.numeroGuiaPrestador || 'N/A'}</strong><br>
+                        <small>Carteirinha: ${pac.carteirinha || 'N/A'} | ${status}</small>
+                    </li>
+                `;
             } else {
-                falhas++;
-                const errorMsg = res.error || (envio ? envio.error : 'Erro desconhecido');
-                html += `<li class="error">✗ Falha ao enviar guia <b>${pac.numeroGuiaPrestador}</b>. Motivo: ${errorMsg}</li>`;
+                const errorMsg = res.error || status || 'Erro desconhecido';
+                html += `
+                    <li class="error">
+                        ❌ <strong>Guia ${pac.numeroGuiaPrestador || 'N/A'}</strong><br>
+                        <small>Erro: ${errorMsg}</small>
+                    </li>
+                `;
             }
         });
 
         html += '</ul>';
-
-        let resumo = `
-            <h3>Resumo do Processamento</h3>
-            <p>Total de guias processadas: ${sucessos + falhas}</p>
-            <p style="color: var(--success-green);">Sucessos: ${sucessos}</p>
-            <p style="color: var(--error-red);">Falhas: ${falhas}</p>
-            <hr>
-        `;
-
-        resultsContent.innerHTML = resumo + html;
+        resultsContent.innerHTML = html;
 
     } else if (result.error) {
         displayError(result.error);
     } else {
-        // Fallback para mostrar o JSON bruto
-        resultsContent.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        displayError('Resposta inesperada do servidor');
     }
 
     // Scroll suave até os resultados
@@ -195,20 +296,27 @@ function displayResults(result) {
 }
 
 function displayError(errorMessage) {
-    resultsSection.style.display = 'block';
+    resultsSection.classList.add('active');
     resultsSection.style.borderLeftColor = 'var(--error-red)';
     resultsSection.style.background = '#fff5f5';
     
     resultsContent.innerHTML = `
-        <h3 style="color: var(--error-red);">Erro no Processamento</h3>
-        <p>${errorMessage}</p>
+        <h3 style="color: var(--error-red);">❌ Erro no Processamento</h3>
+        <p style="margin-top: 10px;">${errorMessage}</p>
+        <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 5px;">
+            <p style="font-size: 12px; color: #666;">
+                💡 Dica: Verifique se o servidor está rodando e se os arquivos estão corretos.
+            </p>
+        </div>
     `;
+    
     // Scroll suave até o erro
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// Expor função removeFile globalmente
+// Expor funções globalmente
 window.removeFile = removeFile;
 
 // Log de inicialização
-console.log('Sistema LAB inicializado ✓');
+console.log('✅ Sistema LAB - Envio Anexos TISS inicializado');
+console.log('📌 Aguardando seleção de arquivos XML e PDF...');
