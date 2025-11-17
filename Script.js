@@ -41,21 +41,20 @@ function handleFileSelect(e) {
 }
 
 function addFiles(files) {
-    // Validar se são arquivos XML
     const validFiles = files.filter(file => {
         const isXML = file.name.toLowerCase().endsWith('.xml');
         const isPDF = file.name.toLowerCase().endsWith('.pdf');
         
         if (!isXML && !isPDF) {
-            alert(`O arquivo "${file.name}" não é um XML ou PDF válido.`);
+            alert(`O arquivo "${file.name}" tem um formato inválido. Apenas XML e PDF são permitidos.`);
         }
         
         return isXML || isPDF;
     });
     
-    if (xmlFiles.length === 0) return;
+    if (validFiles.length === 0) return;
     
-    selectedFiles = [...selectedFiles, ...xmlFiles];
+    selectedFiles = [...selectedFiles, ...validFiles];
     renderFileList();
     processBtn.disabled = selectedFiles.length === 0;
 }
@@ -77,17 +76,16 @@ function renderFileList() {
     fileList.innerHTML = selectedFiles.map((file, index) => `
         <div class="file-item">
             <div class="file-info">
-                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                     <polyline points="13 2 13 9 20 9"></polyline>
-                    <text x="8" y="18" font-size="6" fill="currentColor" font-weight="bold">XML</text>
                 </svg>
                 <div class="file-details">
                     <h4>${file.name}</h4>
                     <p>${formatFileSize(file.size)}</p>
                 </div>
             </div>
-            <button class="remove-btn" onclick="removeFile(${index})">
+            <button class="remove-btn" title="Remover arquivo" onclick="removeFile(${index})">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -165,7 +163,7 @@ function displayResults(result) {
 
             if (envio && envio.success) {
                 sucessos++;
-                html += `<li class="success">✓ Guia <b>${pac.numeroGuiaPrestador}</b> enviada com sucesso!</li>`;
+                html += `<li class="success">✓ Guia <b>${pac.numeroGuiaPrestador || 'N/A'}</b> enviada com sucesso!</li>`;
             } else {
                 falhas++;
                 const errorMsg = res.error || (envio ? envio.error : 'Erro desconhecido');
@@ -201,12 +199,10 @@ function displayError(errorMessage) {
     resultsSection.style.borderLeftColor = 'var(--error-red)';
     resultsSection.style.background = '#fff5f5';
     
-    const resultsTitle = resultsSection.querySelector('h3');
-    resultsTitle.textContent = 'Erro no Processamento';
-    resultsTitle.style.color = 'var(--error-red)';
-    
-    resultsContent.textContent = errorMessage;
-    
+    resultsContent.innerHTML = `
+        <h3 style="color: var(--error-red);">Erro no Processamento</h3>
+        <p>${errorMessage}</p>
+    `;
     // Scroll suave até o erro
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
