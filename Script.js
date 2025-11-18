@@ -372,10 +372,11 @@ async function processFiles() {
                             addLog(`📝 Guia: ${res.paciente?.numeroGuiaPrestador || 'N/A'}`, 'info');
                             addLog(`📄 PDF: ${res.pdf_name || 'N/A'}`, 'info');
 
-                            if (res.status === 'sucesso') {
+                            if (res.success) {
                                 addLog(`✅ Enviado com sucesso!`, 'success');
                             } else {
-                                addLog(`❌ Falha: ${res.erro || 'Erro desconhecido'}`, 'error');
+                                const erro = res.resultado_envio?.error || res.error || 'Erro desconhecido';
+                                addLog(`❌ Falha: ${erro}`, 'error');
                             }
 
                             pacientesProcessados++;
