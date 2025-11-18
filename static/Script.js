@@ -306,6 +306,7 @@ async function processFiles() {
         addLog('📡 Enviando para o servidor...', 'info');
 
         let allResults = [];
+        let pacientesProcessados = 0;
 
         for (let i = 0; i < batches.length; i++) {
             const batch = batches[i];
@@ -361,9 +362,9 @@ async function processFiles() {
 
                     // Mostrar logs detalhados de cada PDF processado
                     if (result.resultados && result.resultados.length > 0) {
-                        result.resultados.forEach((res, idx) => {
-                            const loteNum = pacientesProcessados + idx + 1;
-                            const totalPdfs = xmlFiles.length + pdfFiles.length;
+                        result.resultados.forEach((res) => {
+                            const loteNum = pacientesProcessados + 1;
+                            const totalPdfs = pdfFiles.length;
 
                             addLog('', 'info');
                             addLog(`📦 LOTE [${loteNum}/${totalPdfs}]`, 'info');
@@ -376,6 +377,8 @@ async function processFiles() {
                             } else {
                                 addLog(`❌ Falha: ${res.erro || 'Erro desconhecido'}`, 'error');
                             }
+
+                            pacientesProcessados++;
                         });
                     }
 
