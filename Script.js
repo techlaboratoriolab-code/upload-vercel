@@ -359,11 +359,31 @@ async function processFiles() {
                     const result = await response.json();
                     allResults.push(...result.resultados);
 
+                    // Mostrar logs detalhados de cada PDF processado
+                    if (result.resultados && result.resultados.length > 0) {
+                        result.resultados.forEach((res, idx) => {
+                            const loteNum = pacientesProcessados + idx + 1;
+                            const totalPdfs = xmlFiles.length + pdfFiles.length;
+
+                            addLog('', 'info');
+                            addLog(`📦 LOTE [${loteNum}/${totalPdfs}]`, 'info');
+                            addLog(`📋 Carteirinha: ${res.paciente?.numeroCarteira || 'N/A'}`, 'info');
+                            addLog(`📝 Guia: ${res.paciente?.numeroGuiaPrestador || 'N/A'}`, 'info');
+                            addLog(`📄 PDF: ${res.pdf_name || 'N/A'}`, 'info');
+
+                            if (res.status === 'sucesso') {
+                                addLog(`✅ Enviado com sucesso!`, 'success');
+                            } else {
+                                addLog(`❌ Falha: ${res.erro || 'Erro desconhecido'}`, 'error');
+                            }
+                        });
+                    }
+
                     const sucessos = result.resumo?.sucessos || 0;
                     const erros = result.resumo?.erros || 0;
 
-                    addLog(`✅ Lote ${i + 1} processado em ${elapsed}s`, 'success');
-                    addLog(`   ✓ Sucesso: ${sucessos} | ✗ Erros: ${erros}`, 'info');
+                    addLog('', 'info');
+                    addLog(`📊 Resumo do lote ${i + 1}: ✓ ${sucessos} sucesso(s) | ✗ ${erros} erro(s) | ⏱️ ${elapsed}s`, 'info');
                     sucesso = true;
 
                 } catch (error) {
