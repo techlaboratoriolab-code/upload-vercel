@@ -519,8 +519,8 @@ window.removeFile = removeFile;
 
 // Log de inicialização
 console.log('✅ Sistema LAB - Envio Anexos TISS inicializado');
-console.log('📌 Aguardando seleção de arquivos XML...');
-addLog('🚀 Sistema LAB inicializado', 'success');
-addLog('📌 Aguardando seleção de arquivos XML...', 'info');
-addLog('💡 PDFs serão buscados automaticamente do Google Drive', 'info');
+console.log('📌 Aguardando seleção de arquivos...');
+addLog('🚀 Sistema LAB - Envio de Anexos TISS', 'success');
+addLog('📌 Selecione os arquivos XML e PDF para processar', 'info');
+addLog('', 'info');
 logConsole.classList.add('active');
