@@ -325,13 +325,11 @@ def enviar_xml():
                 numero_guia_pdf = pdf_name.split('_')[0].strip()
 
                 logger.info("=" * 70)
-                logger.info(f"📄 PROCESSANDO PDF {pacientes_processados + 1} de {len(pdfs)}")
-                logger.info(f"   Arquivo: {pdf_name}")
-                logger.info(f"   Número da Guia extraído do PDF: {numero_guia_pdf}")
+                logger.info(f"📦 LOTE [{pacientes_processados + 1}/{len(pdfs)}]")
+                logger.info(f"   📄 PDF: {pdf_name}")
                 logger.info("")
 
                 # Buscar paciente correspondente
-                logger.info("🔍 Procurando paciente correspondente no XML...")
                 paciente_encontrado = None
                 for paciente in pacientes:
                     guia_prestador = str(paciente.get('numeroGuiaPrestador', '')).strip()
@@ -345,10 +343,6 @@ def enviar_xml():
                         guia_prestador.endswith(numero_guia_pdf) or
                         guia_operadora.endswith(numero_guia_pdf)):
                         paciente_encontrado = paciente
-                        logger.info(f"✅ PACIENTE ENCONTRADO!")
-                        logger.info(f"   👤 Nome: {paciente_encontrado.get('nome', 'N/A')}")
-                        logger.info(f"   🔢 Guia Prestador: {guia_prestador}")
-                        logger.info(f"   🔢 Guia Operadora: {guia_operadora}")
                         break
 
                 if not paciente_encontrado:
@@ -368,11 +362,10 @@ def enviar_xml():
                 pacientes_processados += 1
                 guia_prestador = paciente_encontrado.get('numeroGuiaPrestador', '')
 
-                logger.info("")
-                logger.info(f"📤 ENVIANDO para a API da Orizon...")
-                logger.info(f"   Destino: https://tiss-documentos.orizon.com.br")
-                logger.info(f"   Lote: {paciente_encontrado.get('numeroLote', 'N/A')}")
-                logger.info(f"   Protocolo: {paciente_encontrado.get('numeroProtocolo', 'N/A')}")
+                logger.info(f"📋 Carteirinha: {paciente_encontrado.get('numeroCarteira', 'N/A')}")
+                logger.info(f"📝 Guia: {guia_prestador}")
+                logger.info(f"📄 PDF: {pdf_name}")
+                logger.info(f"📤 Enviando...")
 
                 resultado_envio = cliente_orizon.enviar_documento(
                     numero_lote=paciente_encontrado.get('numeroLote', ''),
@@ -383,19 +376,12 @@ def enviar_xml():
                     pdf_base64=pdf_data
                 )
 
-                logger.info("")
                 if resultado_envio.get('success'):
                     total_sucessos += 1
-                    logger.info(f"✅ SUCESSO! Guia enviada com sucesso")
-                    logger.info(f"   Paciente: {paciente_encontrado.get('nome', 'N/A')}")
-                    logger.info(f"   Guia: {guia_prestador}")
-                    logger.info(f"   Status HTTP: {resultado_envio.get('status_code', 'N/A')}")
+                    logger.info(f"✅ Enviado com sucesso!")
                 else:
                     total_erros += 1
-                    logger.error(f"❌ FALHA no envio!")
-                    logger.error(f"   Paciente: {paciente_encontrado.get('nome', 'N/A')}")
-                    logger.error(f"   Guia: {guia_prestador}")
-                    logger.error(f"   Erro: {resultado_envio.get('error', 'Erro desconhecido')}")
+                    logger.error(f"❌ Falha: {resultado_envio.get('error', 'Erro desconhecido')}")
 
                 logger.info("=" * 70)
                 logger.info("")
