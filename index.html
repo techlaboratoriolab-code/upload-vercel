@@ -6,53 +6,67 @@
     <title>LAB - Envio Anexos TISS</title>
     <style>
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --background-light: #f8f9ff;
-            --border-color: #d1d8ff;
-            --text-dark: #333;
-            --text-light: #666;
-            --success-green: #28a745;
-            --error-red: #dc3545;
+            --lab-blue: #4A90E2;
+            --lab-dark: #1A1A1A;
+            --lab-gray: #F5F7FA;
+            --lab-border: #E1E8ED;
+            --text-dark: #1A1A1A;
+            --text-light: #6B7280;
+            --success-green: #10B981;
+            --error-red: #EF4444;
+            --warning-orange: #F59E0B;
         }
 
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: var(--lab-gray);
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .container {
-            max-width: 800px;
-            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
         }
 
-        h1 {
-            color: var(--primary-color);
+        .header {
+            background: var(--lab-dark);
+            padding: 30px 40px;
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 28px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .logo-dot {
+            color: var(--lab-blue);
         }
 
         .subtitle {
-            text-align: center;
-            color: var(--text-light);
-            margin-bottom: 40px;
+            color: var(--lab-blue);
             font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .content {
+            padding: 40px;
         }
 
         .upload-section {
@@ -62,30 +76,34 @@
         .section-title {
             color: var(--text-dark);
             font-size: 16px;
-            margin-bottom: 10px;
-            font-weight: 600;
+            margin-bottom: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         #uploadArea {
-            border: 3px dashed var(--border-color);
-            border-radius: 12px;
-            padding: 40px;
+            border: 2px dashed var(--lab-border);
+            border-radius: 10px;
+            padding: 50px;
             text-align: center;
             cursor: pointer;
-            background: var(--background-light);
-            transition: all 0.3s;
+            background: var(--lab-gray);
+            transition: all 0.3s ease;
         }
 
         #uploadArea:hover, #uploadArea.drag-over {
-            background: #f0f2ff;
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
+            background: #EBF5FF;
+            border-color: var(--lab-blue);
+            border-width: 3px;
         }
 
         #uploadArea h3 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-            font-size: 20px;
+            color: var(--lab-dark);
+            margin-bottom: 8px;
+            font-size: 18px;
+            font-weight: 700;
         }
 
         #uploadArea p {
@@ -95,21 +113,23 @@
 
         .file-type-badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
             margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .badge-xml {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: var(--lab-blue);
+            color: white;
         }
 
         .badge-pdf {
-            background: #ffebee;
-            color: #c62828;
+            background: var(--lab-dark);
+            color: white;
         }
 
         #fileList {
@@ -117,86 +137,91 @@
             margin-bottom: 20px;
         }
 
-        #fileList.active { 
-            display: block; 
+        #fileList.active {
+            display: block;
         }
 
         .file-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px;
-            background: var(--background-light);
-            border: 1px solid var(--border-color);
+            padding: 15px;
+            background: white;
+            border: 1px solid var(--lab-border);
             border-radius: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             transition: all 0.2s;
         }
 
         .file-item:hover {
-            background: #f0f2ff;
-            border-color: var(--primary-color);
+            border-color: var(--lab-blue);
+            box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
         }
 
-        .file-info { 
-            display: flex; 
-            align-items: center; 
+        .file-info {
+            display: flex;
+            align-items: center;
             flex: 1;
         }
 
-        .file-icon { 
-            width: 40px; 
-            height: 40px; 
-            margin-right: 15px; 
-            color: var(--primary-color); 
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            color: var(--lab-blue);
         }
 
-        .file-details h4 { 
-            font-size: 14px; 
-            color: var(--text-dark); 
+        .file-details h4 {
+            font-size: 14px;
+            color: var(--text-dark);
             margin-bottom: 4px;
+            font-weight: 600;
         }
 
-        .file-details p { 
-            font-size: 12px; 
-            color: var(--text-light); 
+        .file-details p {
+            font-size: 12px;
+            color: var(--text-light);
         }
 
-        .remove-btn { 
-            background: none; 
-            border: none; 
-            cursor: pointer; 
+        .remove-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
             color: var(--error-red);
-            padding: 5px;
-            transition: transform 0.2s;
+            padding: 8px;
+            transition: all 0.2s;
+            border-radius: 4px;
         }
 
         .remove-btn:hover {
-            transform: scale(1.2);
+            background: #FEE2E2;
         }
 
         #processBtn {
             width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            padding: 18px;
+            background: var(--lab-blue);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         #processBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: #3A7BC8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
         }
 
         #processBtn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            background: #ccc;
+            background: var(--lab-border);
         }
 
         #statusSection {
@@ -210,8 +235,8 @@
         }
 
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
+            border: 4px solid var(--lab-border);
+            border-top: 4px solid var(--lab-blue);
             border-radius: 50%;
             width: 50px;
             height: 50px;
@@ -219,16 +244,18 @@
             margin: 0 auto 15px;
         }
 
-        #statusText { 
-            color: var(--primary-color); 
-            font-weight: bold; 
+        #statusText {
+            color: var(--lab-dark);
+            font-weight: 600;
+            font-size: 15px;
         }
 
         #resultsSection {
             margin-top: 30px;
             padding: 20px;
             border-radius: 10px;
-            border-left: 5px solid var(--primary-color);
+            background: var(--lab-gray);
+            border-left: 4px solid var(--lab-blue);
             display: none;
         }
 
@@ -239,40 +266,41 @@
         #resultsSection h3 {
             margin-bottom: 15px;
             color: var(--text-dark);
+            font-weight: 700;
         }
 
-        #resultsSection ul { 
-            list-style: none; 
-            padding: 0; 
+        #resultsSection ul {
+            list-style: none;
+            padding: 0;
         }
 
-        #resultsSection li { 
+        #resultsSection li {
             margin-bottom: 8px;
             padding: 8px;
             background: white;
             border-radius: 5px;
         }
 
-        .success { 
-            color: var(--success-green); 
+        .success {
+            color: var(--success-green);
         }
 
-        .error { 
-            color: var(--error-red); 
+        .error {
+            color: var(--error-red);
         }
 
         #logConsole {
             display: none;
             margin-top: 20px;
-            background: #1e1e1e;
+            background: var(--lab-dark);
             border-radius: 10px;
             padding: 20px;
-            max-height: 400px;
+            max-height: 450px;
             overflow-y: auto;
-            font-family: 'Courier New', monospace;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
-            color: #d4d4d4;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: #E5E7EB;
+            border: 1px solid #333;
         }
 
         #logConsole.active {
@@ -284,28 +312,31 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #444;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #333;
         }
 
         #logConsole .log-header h3 {
             margin: 0;
-            color: #4ec9b0;
+            color: var(--lab-blue);
             font-size: 16px;
+            font-weight: 700;
         }
 
         #logConsole .clear-btn {
-            background: #d73a49;
+            background: var(--error-red);
             color: white;
             border: none;
-            padding: 5px 15px;
-            border-radius: 5px;
+            padding: 6px 16px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
 
         #logConsole .clear-btn:hover {
-            background: #cb2431;
+            background: #DC2626;
         }
 
         #logContent {
@@ -313,95 +344,106 @@
         }
 
         .log-line {
-            margin-bottom: 5px;
-            padding: 3px 0;
+            margin-bottom: 6px;
+            padding: 4px 0;
+            line-height: 1.5;
         }
 
         .log-info {
-            color: #4fc3f7;
+            color: var(--lab-blue);
         }
 
         .log-success {
-            color: #4caf50;
+            color: var(--success-green);
         }
 
         .log-error {
-            color: #f44336;
+            color: var(--error-red);
         }
 
         .log-warning {
-            color: #ff9800;
+            color: var(--warning-orange);
         }
 
         .log-timestamp {
-            color: #888;
+            color: #6B7280;
             margin-right: 10px;
         }
 
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .info-box {
-            background: #e3f2fd;
-            padding: 15px;
+            background: #EBF5FF;
+            padding: 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #1976d2;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--lab-blue);
         }
 
         .info-box p {
             font-size: 13px;
-            color: #0d47a1;
-            margin: 5px 0;
+            color: var(--text-dark);
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: var(--lab-blue);
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏥 LAB - Envio Anexos TISS</h1>
-        <p class="subtitle">Sistema de processamento de arquivos XML TISS e envio de anexos</p>
-
-        <div class="info-box">
-            <p>📌 <strong>Instruções:</strong></p>
-            <p>• Arraste ou selecione os arquivos XML do lote TISS</p>
-            <p>• Os PDFs serão buscados automaticamente em: <strong>G:\Meu Drive\pdfs orizon</strong></p>
-            <p>• Clique em "Processar e Enviar" para iniciar o envio</p>
+        <div class="header">
+            <div class="logo">LAB<span class="logo-dot">.</span></div>
+            <div class="subtitle">Medicina Diagnóstica</div>
         </div>
 
-        <div class="upload-section">
-            <h3 class="section-title">📄 Adicionar Arquivos XML</h3>
-            <div id="uploadArea">
-                <h3>Arraste os arquivos XML aqui</h3>
-                <p>ou clique para selecionar</p>
-                <div style="margin-top: 10px;">
-                    <span class="file-type-badge badge-xml">Apenas XML</span>
+        <div class="content">
+            <div class="info-box">
+                <p>📋 <strong>Sistema de Envio de Anexos TISS</strong></p>
+                <p>• Selecione os arquivos <strong>XML</strong> e <strong>PDF</strong> do lote TISS</p>
+                <p>• O sistema irá processar e enviar automaticamente para a Orizon</p>
+                <p>• Acompanhe o status de cada envio no console de logs abaixo</p>
+            </div>
+
+            <div class="upload-section">
+                <h3 class="section-title">📁 Selecionar Arquivos</h3>
+                <div id="uploadArea">
+                    <h3>Arraste os arquivos aqui</h3>
+                    <p>ou clique para selecionar</p>
+                    <div style="margin-top: 15px;">
+                        <span class="file-type-badge badge-xml">XML</span>
+                        <span class="file-type-badge badge-pdf">PDF</span>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xml,.pdf" multiple hidden>
                 </div>
-                <p style="margin-top: 10px; font-size: 12px; color: #666;">💡 PDFs buscados automaticamente do Drive</p>
-                <input type="file" id="fileInput" accept=".xml" multiple hidden>
             </div>
-        </div>
 
-        <div id="fileList"></div>
+            <div id="fileList"></div>
 
-        <button id="processBtn" disabled>Processar e Enviar Anexos</button>
+            <button id="processBtn" disabled>🚀 Processar e Enviar Anexos</button>
 
-        <div id="statusSection">
-            <div class="spinner"></div>
-            <p id="statusText">Processando...</p>
-        </div>
-
-        <div id="logConsole">
-            <div class="log-header">
-                <h3>📊 Console de Logs</h3>
-                <button class="clear-btn" onclick="clearLogs()">🗑️ Limpar</button>
+            <div id="statusSection">
+                <div class="spinner"></div>
+                <p id="statusText">Processando...</p>
             </div>
-            <div id="logContent"></div>
-        </div>
 
-        <div id="resultsSection">
-            <div id="resultsContent"></div>
+            <div id="logConsole">
+                <div class="log-header">
+                    <h3>📊 Console de Logs</h3>
+                    <button class="clear-btn" onclick="clearLogs()">🗑️ Limpar</button>
+                </div>
+                <div id="logContent"></div>
+            </div>
+
+            <div id="resultsSection">
+                <div id="resultsContent"></div>
+            </div>
         </div>
     </div>
 
