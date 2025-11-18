@@ -240,6 +240,7 @@ class ProcessadorXMLTISS:
                 paciente['numeroGuiaPrestador'] = texto
             elif 'numerocarteira' in tag or 'carteirinha' in tag:
                 paciente['carteirinha'] = texto
+                paciente['numeroCarteira'] = texto
             elif 'numeroprotocolo' in tag or 'protocolo' in tag:
                 paciente['numeroProtocolo'] = texto
             elif 'nomebeneficiario' in tag:
