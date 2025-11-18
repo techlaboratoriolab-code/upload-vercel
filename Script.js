@@ -265,8 +265,8 @@ async function processFiles() {
         addLog(`✅ ${pdfData.length} PDFs convertidos com sucesso`, 'success');
         addLog('', 'info');
 
-        // Separar PDFs grandes (>1.5MB) e pequenos
-        const MAX_PDF_SIZE = 1.5 * 1024 * 1024; // 1.5MB em bytes
+        // Separar PDFs grandes (>800KB) e pequenos para evitar erro 413
+        const MAX_PDF_SIZE = 800 * 1024; // 800KB em bytes (mais conservador)
         const largePdfs = [];
         const smallPdfs = [];
 
