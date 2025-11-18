@@ -315,7 +315,8 @@ def enviar_xml():
                 continue
 
             logger.info(f"👥 Total de pacientes no XML: {len(pacientes)}")
-            logger.info(f"📎 Total de PDFs no lote: {len(pdfs)}")
+            logger.info(f"📎 Total de PDFs neste lote: {len(pdfs)}")
+            logger.info("")
 
             # Processar apenas pacientes que têm PDF no lote atual
             pacientes_processados = 0
@@ -323,7 +324,14 @@ def enviar_xml():
                 # Extrair número da guia do nome do PDF (ex: 357609997_GUIA_doc1.pdf -> 357609997)
                 numero_guia_pdf = pdf_name.split('_')[0].strip()
 
+                logger.info("=" * 70)
+                logger.info(f"📄 PROCESSANDO PDF {pacientes_processados + 1} de {len(pdfs)}")
+                logger.info(f"   Arquivo: {pdf_name}")
+                logger.info(f"   Número da Guia extraído do PDF: {numero_guia_pdf}")
+                logger.info("")
+
                 # Buscar paciente correspondente
+                logger.info("🔍 Procurando paciente correspondente no XML...")
                 paciente_encontrado = None
                 for paciente in pacientes:
                     guia_prestador = str(paciente.get('numeroGuiaPrestador', '')).strip()
@@ -337,12 +345,17 @@ def enviar_xml():
                         guia_prestador.endswith(numero_guia_pdf) or
                         guia_operadora.endswith(numero_guia_pdf)):
                         paciente_encontrado = paciente
-                        logger.info(f"✓ Match: PDF {numero_guia_pdf} -> Guia Prestador: {guia_prestador}, Guia Operadora: {guia_operadora}")
+                        logger.info(f"✅ PACIENTE ENCONTRADO!")
+                        logger.info(f"   👤 Nome: {paciente_encontrado.get('nome', 'N/A')}")
+                        logger.info(f"   🔢 Guia Prestador: {guia_prestador}")
+                        logger.info(f"   🔢 Guia Operadora: {guia_operadora}")
                         break
 
                 if not paciente_encontrado:
-                    logger.error(f"❌ Paciente não encontrado para PDF: {pdf_name} (número: {numero_guia_pdf})")
-                    logger.error(f"   Exemplos de guias no XML: {[p.get('numeroGuiaPrestador', 'N/A')[:20] for p in pacientes[:3]]}")
+                    logger.error(f"❌ ERRO: Paciente NÃO encontrado no XML")
+                    logger.error(f"   PDF: {pdf_name}")
+                    logger.error(f"   Número procurado: {numero_guia_pdf}")
+                    logger.error(f"   Motivo: Não existe guia com esse número no XML")
                     resultados_finais.append({
                         'pdf': pdf_name,
                         'status': 'Erro',
@@ -354,10 +367,12 @@ def enviar_xml():
 
                 pacientes_processados += 1
                 guia_prestador = paciente_encontrado.get('numeroGuiaPrestador', '')
-                logger.info(f"\n--- Processando {pacientes_processados}/{len(pdfs)} ---")
-                logger.info(f"👤 Nome: {paciente_encontrado.get('nome', 'N/A')}")
-                logger.info(f"🔢 Guia Prestador: {guia_prestador}")
-                logger.info(f"📎 PDF: {pdf_name}")
+
+                logger.info("")
+                logger.info(f"📤 ENVIANDO para a API da Orizon...")
+                logger.info(f"   Destino: https://tiss-documentos.orizon.com.br")
+                logger.info(f"   Lote: {paciente_encontrado.get('numeroLote', 'N/A')}")
+                logger.info(f"   Protocolo: {paciente_encontrado.get('numeroProtocolo', 'N/A')}")
 
                 resultado_envio = cliente_orizon.enviar_documento(
                     numero_lote=paciente_encontrado.get('numeroLote', ''),
@@ -367,13 +382,23 @@ def enviar_xml():
                     numero_documento=paciente_encontrado.get('numeroDocumento', ''),
                     pdf_base64=pdf_data
                 )
-                
+
+                logger.info("")
                 if resultado_envio.get('success'):
                     total_sucessos += 1
-                    logger.info(f"✅ Sucesso no envio da guia {guia_prestador}")
+                    logger.info(f"✅ SUCESSO! Guia enviada com sucesso")
+                    logger.info(f"   Paciente: {paciente_encontrado.get('nome', 'N/A')}")
+                    logger.info(f"   Guia: {guia_prestador}")
+                    logger.info(f"   Status HTTP: {resultado_envio.get('status_code', 'N/A')}")
                 else:
                     total_erros += 1
-                    logger.error(f"❌ Falha no envio da guia {guia_prestador}")
+                    logger.error(f"❌ FALHA no envio!")
+                    logger.error(f"   Paciente: {paciente_encontrado.get('nome', 'N/A')}")
+                    logger.error(f"   Guia: {guia_prestador}")
+                    logger.error(f"   Erro: {resultado_envio.get('error', 'Erro desconhecido')}")
+
+                logger.info("=" * 70)
+                logger.info("")
 
                 resultados_finais.append({
                     'paciente': paciente_encontrado,
