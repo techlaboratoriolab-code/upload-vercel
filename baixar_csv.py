@@ -18,9 +18,9 @@ BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'aplis2')
 IMAGE_PREFIX = 'lab/Arquivos/Foto/'
 
 # Caminhos
-CSV_PATH = r"C:\Users\Windows 11\Downloads\requisicaoimagem_filtrada_final.csv"
-DESTINO_IMAGENS = Path(r"C:\Users\Windows 11\Desktop\automação lotes Orizon\imagens s3")
-DESTINO_LAUDOS = Path(r"C:\Users\Windows 11\Desktop\automação lotes Orizon\laudos s3")
+CSV_PATH = r"C:\Users\supor\Desktop\Lista\requisicaoimagem_filtrada_final.csv"
+DESTINO_IMAGENS = Path(r"C:\Users\supor\Desktop\imagemAWS")
+DESTINO_LAUDOS = Path(r"C:\Users\supor\Desktop\imagemAWS")
 
 # ETAPA 1: Mapeamento de prefixos para IMAGENS
 PREFIXOS_IMAGENS = {
@@ -179,63 +179,55 @@ def processar_laudo(linha, s3, total, contadores, lock, erros):
             print(f"[LAUDO {contadores['processados']}/{total}] {'(vazio)':<40} PULADO - SEM LAUDO")
         return
 
-    # Pegar o código da empresa (primeiros 4 dígitos do CodRequisicao_extraido)
-    # Ex: "0200045916001" -> código é "0200"
     codigo_empresa = nome_arquivo[:4] if len(nome_arquivo) >= 4 else ""
-
-    # Arquivos no S3 TÊM extensão .pdf
-    # Ex: buscar "0200045916001.pdf"
-    nome_completo = f"{nome_arquivo}.pdf"
-    destino = DESTINO_LAUDOS / nome_completo
-
-    # Verificar se já existe
-    if destino.exists():
-        with lock:
-            contadores['ja_existe'] += 1
-            contadores['processados'] += 1
-            print(f"[LAUDO {contadores['processados']}/{total}] {nome_completo:<40} JÁ EXISTE")
-        return
-
-    # Buscar no S3 - usar código da empresa, não o nome do arquivo
-    # Construir o prefixo correto baseado no código
     if codigo_empresa in PREFIXOS_LAUDOS:
         prefixo_laudo = PREFIXOS_LAUDOS[codigo_empresa]
     else:
         prefixo_laudo = 'lab/Arquivos/Historico/'
 
-    # Buscar diretamente (já temos o correto)
-    caminho_direto = f"{prefixo_laudo}{nome_completo}"
-
+    key = None
     try:
-        s3.head_object(Bucket=BUCKET_NAME, Key=caminho_direto)
-        key = caminho_direto
-    except:
-        # Se não encontrou direto, tentar buscar na pasta
+        paginator = s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(
+            Bucket=BUCKET_NAME,
+            Prefix=prefixo_laudo,
+            PaginationConfig={'PageSize': 1000}
+        )
+
+        candidatos = []
+        for page in pages:
+            if 'Contents' not in page:
+                continue
+
+            for obj in page['Contents']:
+                file_name = obj['Key'].split('/')[-1]
+                # Verifica se o nome do arquivo na nuvem começa com o código da requisição
+                if file_name.lower().startswith(nome_arquivo.lower()):
+                    candidatos.append(obj)
+        
+        # Se encontrou arquivos que começam com o código, escolhe o mais recente
+        if candidatos:
+            # Ordena os candidatos pela data de modificação (mais recente primeiro)
+            candidatos.sort(key=lambda o: o['LastModified'], reverse=True)
+            key = candidatos[0]['Key'] # Pega o mais recente
+
+    except Exception as e:
         key = None
-        try:
-            paginator = s3.get_paginator('list_objects_v2')
-            pages = paginator.paginate(
-                Bucket=BUCKET_NAME,
-                Prefix=prefixo_laudo,
-                PaginationConfig={'PageSize': 1000}
-            )
+        print(f"[ERRO] Falha ao listar laudos para {nome_arquivo}: {e}")
 
-            for page in pages:
-                if 'Contents' not in page:
-                    continue
-
-                for obj in page['Contents']:
-                    obj_key = obj['Key']
-                    file_name = obj_key.split('/')[-1]
-
-                    if file_name.lower() == nome_completo.lower():
-                        key = obj_key
-                        break
-
-                if key:
-                    break
-        except:
-            key = None
+    # Define o nome do arquivo de destino com base no que foi encontrado
+    if key:
+        nome_completo = key.split('/')[-1]
+        destino = DESTINO_LAUDOS / nome_completo
+        # Verifica se o arquivo mais recente já existe localmente
+        if destino.exists():
+            with lock:
+                contadores['ja_existe'] += 1
+                contadores['processados'] += 1
+                print(f"[LAUDO {contadores['processados']}/{total}] {nome_completo:<40} JÁ EXISTE")
+            return
+    else:
+        nome_completo = f"{nome_arquivo}.pdf" # Nome padrão para logs de erro
 
     if not key:
         with lock:
@@ -246,6 +238,7 @@ def processar_laudo(linha, s3, total, contadores, lock, erros):
         return
 
     # Baixar
+    destino = DESTINO_LAUDOS / nome_completo
     if baixar_arquivo(s3, key, destino):
         tamanho_kb = destino.stat().st_size / 1024
         with lock:

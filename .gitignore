@@ -2,7 +2,9 @@
 __pycache__/
 *.pyc
 venv/
+.env
 *.env
+!.env.example
 
 # OS
 .DS_Store
@@ -11,3 +13,10 @@ venv/
 enviar_anexos_producao.py
 xml pacientes/backups_aws/*.7z
 backups_aws/*.zip
+backups_aws/
+imagens s3/
+laudos s3/
+erros_download.txt
+
+# CSV com dados sensíveis
+requisicaoimagem_filtrada_final.csv
