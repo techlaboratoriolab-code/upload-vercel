@@ -6,1102 +6,892 @@
     <title>LAB - Envio Anexos TISS</title>
     <style>
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --background-light: #f8f9ff;
-            --border-color: #d1d8ff;
-            --text-dark: #333;
-            --text-light: #666;
-            --success-green: #28a745;
-            --error-red: #dc3545;
+            --lab-blue: #4A90E2;
+            --lab-dark: #1A1A1A;
+            --lab-gray: #F5F7FA;
+            --lab-border: #E1E8ED;
+            --text-dark: #1A1A1A;
+            --text-light: #6B7280;
+            --success-green: #10B981;
+            --error-red: #EF4444;
+            --warning-orange: #F59E0B;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: var(--lab-gray);
             min-height: 100vh;
             padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        }
+
+        .header {
+            background: var(--lab-dark);
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .logo-dot {
+            color: var(--lab-blue);
+        }
+
+        .subtitle {
+            color: var(--lab-blue);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            color: var(--text-dark);
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
         }
-        .container {
-            max-width: 700px;
-            width: 100%;
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-        h1 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-        .subtitle {
-            text-align: center;
-            color: var(--text-light);
-            margin-bottom: 40px;
-            font-size: 14px;
-        }
+
         #uploadArea {
-            border: 3px dashed var(--border-color);
-            border-radius: 12px;
-            padding: 40px;
+            border: 2px dashed var(--lab-border);
+            border-radius: 10px;
+            padding: 50px;
             text-align: center;
             cursor: pointer;
-            background: var(--background-light);
-            transition: all 0.3s;
-            margin-bottom: 20px;
+            background: var(--lab-gray);
+            transition: all 0.3s ease;
         }
+
         #uploadArea:hover, #uploadArea.drag-over {
-            background: #f0f2ff;
-            border-color: var(--primary-color);
+            background: #EBF5FF;
+            border-color: var(--lab-blue);
+            border-width: 3px;
         }
+
         #uploadArea h3 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-            font-size: 20px;
+            color: var(--lab-dark);
+            margin-bottom: 8px;
+            font-size: 18px;
+            font-weight: 700;
         }
+
         #uploadArea p {
             color: var(--text-light);
             font-size: 14px;
         }
+
+        .file-type-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-xml {
+            background: var(--lab-blue);
+            color: white;
+        }
+
+        .badge-pdf {
+            background: var(--lab-dark);
+            color: white;
+        }
+
+        .badge-zip {
+            background: var(--warning-orange);
+            color: white;
+        }
+
         #fileList {
             display: none;
             margin-bottom: 20px;
         }
-        #fileList.active { display: block; }
+
+        #fileList.active {
+            display: block;
+        }
+
+        .file-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid;
+            margin-bottom: 10px;
+        }
+
+        .file-section-header.xml-header {
+            border-color: #1976d2;
+        }
+
+        .file-section-header.pdf-header {
+            border-color: #c62828;
+        }
+
+        .file-section-header:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .file-section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .file-section-title.xml-title {
+            color: #1976d2;
+        }
+
+        .file-section-title.pdf-title {
+            color: #c62828;
+        }
+
+        .file-count-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .file-count-badge.xml-badge {
+            background: #1976d2;
+        }
+
+        .file-count-badge.pdf-badge {
+            background: #c62828;
+        }
+
+        .file-dropdown-icon {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+
+        .file-dropdown-icon.open {
+            transform: rotate(180deg);
+        }
+
+        .file-section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            margin-bottom: 15px;
+        }
+
+        .file-section-content.open {
+            max-height: 5000px;
+            transition: max-height 0.6s ease-in;
+        }
+
+        .file-items-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        .file-items-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-items-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .file-items-container::-webkit-scrollbar-thumb {
+            background: #999;
+            border-radius: 10px;
+        }
+
+        .file-items-container::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        #pacientesSection {
+            display: none;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f0f9ff;
+            border-radius: 10px;
+            border-left: 4px solid var(--lab-blue);
+        }
+
+        #pacientesSection.active {
+            display: block;
+        }
+
+        .pacientes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid var(--lab-blue);
+            margin-bottom: 15px;
+        }
+
+        .pacientes-header:hover {
+            background: #f8fafc;
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
+        }
+
+        .pacientes-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .pacientes-header h3 {
+            color: var(--lab-dark);
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .pacientes-count {
+            background: var(--lab-blue);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .selection-badge {
+            background: var(--success-green);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .dropdown-icon {
+            font-size: 24px;
+            transition: transform 0.3s;
+            color: var(--lab-blue);
+        }
+
+        .dropdown-icon.open {
+            transform: rotate(180deg);
+        }
+
+        .pacientes-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+
+        .pacientes-content.open {
+            max-height: 10000px;
+            transition: max-height 0.6s ease-in;
+        }
+
+        #pacientesList {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        #pacientesList::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #pacientesList::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #pacientesList::-webkit-scrollbar-thumb {
+            background: var(--lab-blue);
+            border-radius: 10px;
+        }
+
+        #pacientesList::-webkit-scrollbar-thumb:hover {
+            background: #3A7BC8;
+        }
+
+        .paciente-card {
+            background: white;
+            border: 2px solid var(--lab-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .paciente-card:hover {
+            border-color: var(--lab-blue);
+            box-shadow: 0 3px 10px rgba(74, 144, 226, 0.15);
+        }
+
+        .paciente-card.selected {
+            border-color: var(--success-green);
+            background: #f0fdf4;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.2);
+        }
+
+        .paciente-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .paciente-nome {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--lab-dark);
+            margin: 0;
+        }
+
+        .checkbox-custom {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: var(--success-green);
+        }
+
+        .paciente-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .paciente-info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .paciente-info-label {
+            font-weight: 600;
+            color: var(--lab-blue);
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--warning-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            background: #ea580c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--lab-border);
+        }
+
+        .s3-btn {
+            width: 100%;
+            padding: 14px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+        }
+
+        .s3-btn:hover:not(:disabled) {
+            background: #15803d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .s3-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--lab-border);
+        }
+
+        #s3Section {
+            display: none;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f0fdf4;
+            border-radius: 10px;
+            border-left: 4px solid #16a34a;
+        }
+
+        #s3Section.active {
+            display: block;
+        }
+
+        .s3-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .s3-header h3 {
+            color: var(--lab-dark);
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .s3-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #16a34a;
+        }
+
+        .s3-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--lab-border);
+        }
+
+        .s3-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .s3-info-label {
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .s3-info-value {
+            font-weight: 700;
+            color: var(--lab-dark);
+        }
+
+        .selection-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .selection-btn {
+            flex: 1;
+            padding: 10px;
+            background: white;
+            color: var(--lab-blue);
+            border: 2px solid var(--lab-blue);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .selection-btn:hover {
+            background: var(--lab-blue);
+            color: white;
+        }
+
         .file-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px;
-            background: var(--background-light);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        .file-info { display: flex; align-items: center; }
-        .file-icon { width: 40px; height: 40px; margin-right: 15px; color: var(--primary-color); }
-        .file-details h4 { font-size: 14px; color: var(--text-dark); }
-        .file-details p { font-size: 12px; color: var(--text-light); }
-        .remove-btn { background: none; border: none; cursor: pointer; color: var(--error-red); }
-        #processBtn {
-            width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
+            background: white;
+            border: 1px solid var(--lab-border);
+            border-radius: 8px;
+            margin-bottom: 10px;
             transition: all 0.2s;
         }
-        #processBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+
+        .file-item:hover {
+            border-color: var(--lab-blue);
+            box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
         }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            color: var(--lab-blue);
+        }
+
+        .file-details h4 {
+            font-size: 14px;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .file-details p {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--error-red);
+            padding: 8px;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        .remove-btn:hover {
+            background: #FEE2E2;
+        }
+
+        #processBtn {
+            width: 100%;
+            padding: 18px;
+            background: var(--lab-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #processBtn:hover:not(:disabled) {
+            background: #3A7BC8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+        }
+
         #processBtn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            background: var(--lab-border);
         }
+
         #statusSection {
             text-align: center;
             padding: 30px;
             display: none;
         }
+
+        #statusSection.active {
+            display: block;
+        }
+
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary-color);
+            border: 4px solid var(--lab-border);
+            border-top: 4px solid var(--lab-blue);
             border-radius: 50%;
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
             margin: 0 auto 15px;
         }
-        #statusText { color: var(--primary-color); font-weight: bold; }
+
+        #statusText {
+            color: var(--lab-dark);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
         #resultsSection {
             margin-top: 30px;
             padding: 20px;
             border-radius: 10px;
-            border-left: 5px solid;
+            background: var(--lab-gray);
+            border-left: 4px solid var(--lab-blue);
             display: none;
         }
-        #resultsSection ul { list-style: none; padding: 0; }
-        #resultsSection li { margin-bottom: 8px; }
-        .success { color: var(--success-green); }
-        .error { color: var(--error-red); }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🏥 LAB - Envio Anexos TISS</h1>
-        <p class="subtitle">Arraste ou selecione os arquivos XML e PDF das guias</p>
 
-        <div id="uploadArea">
-            <h3>Arraste os arquivos aqui</h3>
-            <p>ou clique para selecionar</p>
-            <input type="file" id="fileInput" accept=".xml,.pdf" multiple hidden>
-        </div>
-
-        <div id="fileList"></div>
-
-        <button id="processBtn" disabled>Processar e Enviar</button>
-
-        <div id="statusSection">
-            <div class="spinner"></div>
-            <p id="statusText">Processando...</p>
-        </div>
-
-        <div id="resultsSection">
-            <div id="resultsContent"></div>
-        </div>
-    </div>
-
-    <script src="/Script.js"></script>
-</body>
-</html>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        h1 {
-            color: #667eea;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-        }
-        .upload-section {
-            margin-bottom: 20px;
-        }
-        .upload-box {
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            background: #f8f9ff;
-            margin-bottom: 15px;
-        }
-        .upload-box:hover {
-            background: #f0f2ff;
-        }
-        .upload-box h3 {
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        .file-info {
-            padding: 10px;
-            background: #e8ebff;
-            border-radius: 5px;
-            margin-top: 10px;
-            display: none;
-        }
-        .file-info.active { display: block; }
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            display: none;
-        }
-        .loading.active { display: block; }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .results {
-            margin-top: 20px;
-            display: none;
-        }
-        .results.active { display: block; }
-        .result-header {
-            padding: 15px;
-            background: #d4edda;
-            color: #155724;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .result-header.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .result-item {
-            padding: 10px;
-            background: #f8f9fa;
-            border-left: 4px solid #28a745;
-            margin-bottom: 8px;
-            border-radius: 4px;
-        }
-        .result-item.error {
-            border-left-color: #dc3545;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🏥 LAB - Envio Anexos TISS</h1>
-        <p class="subtitle">Sistema de envio automático para Orizon</p>
-        
-        <div class="upload-section">
-            <div class="upload-box" id="xmlUpload">
-                <h3>📄 XML do Lote</h3>
-                <p>Clique para selecionar o arquivo XML TISS</p>
-                <input type="file" id="xmlFile" accept=".xml" hidden>
-            </div>
-            <div class="file-info" id="xmlInfo"></div>
-        </div>
-        
-        <div class="upload-section">
-            <div class="upload-box" id="pdfsUpload">
-                <h3>📎 PDFs das Guias</h3>
-                <p>Selecione todos os PDFs das guias</p>
-                <input type="file" id="pdfsFiles" accept=".pdf" multiple hidden>
-            </div>
-            <div class="file-info" id="pdfsInfo"></div>
-        </div>
-        
-        <button class="btn" id="btnProcessar" disabled>Processar e Enviar</button>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p id="loadingText">Processando...</p>
-        </div>
-        
-        <div class="results" id="results"></div>
-    </div>
-    
-    <script>
-        const xmlUpload = document.getElementById('xmlUpload');
-        const xmlFile = document.getElementById('xmlFile');
-        const xmlInfo = document.getElementById('xmlInfo');
-        const pdfsUpload = document.getElementById('pdfsUpload');
-        const pdfsFiles = document.getElementById('pdfsFiles');
-        const pdfsInfo = document.getElementById('pdfsInfo');
-        const btnProcessar = document.getElementById('btnProcessar');
-        const loading = document.getElementById('loading');
-        const loadingText = document.getElementById('loadingText');
-        const results = document.getElementById('results');
-        
-        let selectedXml = null;
-        let selectedPdfs = [];
-        
-        xmlUpload.addEventListener('click', () => xmlFile.click());
-        pdfsUpload.addEventListener('click', () => pdfsFiles.click());
-        
-        xmlFile.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedXml = e.target.files[0];
-                xmlInfo.innerHTML = `✓ ${selectedXml.name}`;
-                xmlInfo.classList.add('active');
-                checkReady();
-            }
-        });
-        
-        pdfsFiles.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedPdfs = Array.from(e.target.files);
-                pdfsInfo.innerHTML = `✓ ${selectedPdfs.length} arquivo(s) selecionado(s)`;
-                pdfsInfo.classList.add('active');
-                checkReady();
-            }
-        });
-        
-        function checkReady() {
-            btnProcessar.disabled = !(selectedXml && selectedPdfs.length > 0);
-        }
-        
-        btnProcessar.addEventListener('click', async () => {
-            loading.classList.add('active');
-            results.classList.remove('active');
-            btnProcessar.disabled = true;
-            
-            try {
-                loadingText.textContent = 'Lendo XML...';
-                const xmlContent = await readFileAsText(selectedXml);
-                
-                loadingText.textContent = 'Convertendo PDFs...';
-                const pdfsDict = {};
-                for (let pdf of selectedPdfs) {
-                    const base64 = await readFileAsBase64(pdf);
-                    pdfsDict[pdf.name] = base64.split(',')[1]; // Remove data:application/pdf;base64,
-                }
-                
-                loadingText.textContent = 'Enviando para processamento...';
-                const response = await fetch('/api/enviar', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        xml_content: xmlContent,
-                        pdfs: pdfsDict
-                    })
-                });
-                
-                const result = await response.json();
-                
-                loading.classList.remove('active');
-                results.classList.add('active');
-                
-                if (result.success) {
-                    let html = `
-                        <div class="result-header">
-                            <strong>✅ Processamento Concluído!</strong><br>
-                            Total: ${result.total} | Sucessos: ${result.sucessos} | Falhas: ${result.falhas}
-                        </div>
-                    `;
-                    
-                    result.resultados.forEach((r, i) => {
-                        const pac = r.paciente;
-                        const classe = r.success ? '' : 'error';
-                        const icone = r.success ? '✅' : '❌';
-                        html += `
-                            <div class="result-item ${classe}">
-                                ${icone} <strong>Guia ${pac.numeroGuiaPrestador}</strong><br>
-                                Carteirinha: ${pac.carteirinha || 'N/A'} | ${r.status}
-                            </div>
-                        `;
-                    });
-                    
-                    results.innerHTML = html;
-                } else {
-                    results.innerHTML = `
-                        <div class="result-header error">
-                            <strong>❌ Erro:</strong> ${result.error}
-                        </div>
-                    `;
-                }
-                
-            } catch (error) {
-                loading.classList.remove('active');
-                results.classList.add('active');
-                results.innerHTML = `
-                    <div class="result-header error">
-                        <strong>❌ Erro:</strong> ${error.message}
-                    </div>
-                `;
-            } finally {
-                btnProcessar.disabled = false;
-            }
-        });
-        
-        function readFileAsText(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
-        }
-        
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-    </script>
-</body>
-</html>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-        h1 {
-            color: #667eea;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
+        #resultsSection.active {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
         }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 14px;
+
+        #resultsSection h3 {
+            margin-bottom: 15px;
+            color: var(--text-dark);
+            font-weight: 700;
         }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .file-upload {
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            background: #f8f9ff;
-        }
-        .file-upload:hover {
-            background: #f0f2ff;
-        }
-        .file-info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e8ebff;
-            border-radius: 5px;
-            display: none;
-        }
-        .file-info.active { display: block; }
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            display: none;
-        }
-        .loading.active { display: block; }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-        .result.active { display: block; }
-        .result.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .result.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🏥 LAB - Envio Anexos Orizon</h1>
-        
-        <form id="formEnvio">
-            <div class="form-group">
-                <label>Código Prestador</label>
-                <input type="text" id="codigoPrestador" value="0000263036" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Login</label>
-                <input type="text" id="login" value="LAB0186" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Senha</label>
-                <input type="password" id="senha" value="91a2ab8fbdd7884f7e32fd19694712a0" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Número do Lote</label>
-                <input type="text" id="numeroLote" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Número do Protocolo</label>
-                <input type="text" id="numeroProtocolo" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Número da Guia Prestador</label>
-                <input type="text" id="numeroGuiaPrestador" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Número da Guia Operadora</label>
-                <input type="text" id="numeroGuiaOperadora" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Número do Documento</label>
-                <input type="text" id="numeroDocumento" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Arquivo PDF</label>
-                <div class="file-upload" id="fileUpload">
-                    📄 Clique para selecionar o PDF
-                    <input type="file" id="filePdf" accept=".pdf" hidden required>
-                </div>
-                <div class="file-info" id="fileInfo"></div>
-            </div>
-            
-            <button type="submit" class="btn" id="btnEnviar">Enviar Anexo</button>
-        </form>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Enviando anexo...</p>
-        </div>
-        
-        <div class="result" id="result"></div>
-    </div>
-    
-    <script>
-        const fileUpload = document.getElementById('fileUpload');
-        const filePdf = document.getElementById('filePdf');
-        const fileInfo = document.getElementById('fileInfo');
-        const formEnvio = document.getElementById('formEnvio');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        let selectedFile = null;
-        
-        fileUpload.addEventListener('click', () => filePdf.click());
-        
-        filePdf.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                fileInfo.innerHTML = `<strong>${selectedFile.name}</strong> (${(selectedFile.size / 1024).toFixed(2)} KB)`;
-                fileInfo.classList.add('active');
-            }
-        });
-        
-        formEnvio.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!selectedFile) {
-                alert('Selecione um arquivo PDF');
-                return;
-            }
-            
-            loading.classList.add('active');
-            result.classList.remove('active');
-            
-            try {
-                // Converter PDF para base64
-                const pdfBase64 = await fileToBase64(selectedFile);
-                
-                // Preparar dados
-                const dados = {
-                    codigo_prestador: document.getElementById('codigoPrestador').value,
-                    login: document.getElementById('login').value,
-                    senha: document.getElementById('senha').value,
-                    registro_ans: '005711',
-                    numero_lote: document.getElementById('numeroLote').value,
-                    numero_protocolo: document.getElementById('numeroProtocolo').value,
-                    numero_guia_prestador: document.getElementById('numeroGuiaPrestador').value,
-                    numero_guia_operadora: document.getElementById('numeroGuiaOperadora').value,
-                    numero_documento: document.getElementById('numeroDocumento').value,
-                    pdf_base64: pdfBase64.split(',')[1], // Remove "data:application/pdf;base64,"
-                    natureza_guia: '2',
-                    tipo_documento: '01',
-                    observacao: ''
-                };
-                
-                // Enviar para API
-                const response = await fetch('/api/enviar', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(dados)
-                });
-                
-                const resposta = await response.json();
-                
-                loading.classList.remove('active');
-                result.classList.add('active');
-                
-                if (resposta.success) {
-                    result.className = 'result active success';
-                    result.innerHTML = '<strong>✅ Sucesso!</strong><br>Anexo enviado com sucesso para a Orizon.';
-                } else {
-                    result.className = 'result active error';
-                    result.innerHTML = `<strong>❌ Erro!</strong><br>${resposta.resultado.error || 'Erro desconhecido'}`;
-                }
-                
-            } catch (error) {
-                loading.classList.remove('active');
-                result.classList.add('active');
-                result.className = 'result active error';
-                result.innerHTML = `<strong>❌ Erro!</strong><br>${error.message}`;
-            }
-        });
-        
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-    </script>
-</body>
-</html>
-        * {
-            margin: 0;
+
+        #resultsSection ul {
+            list-style: none;
             padding: 0;
-            box-sizing: border-box;
         }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #666;
-            font-size: 1.1em;
-        }
-        
-        .form-group {
-            margin-bottom: 25px;
-        }
-        
-        .form-group label {
-            display: block;
+
+        #resultsSection li {
             margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
         }
-        
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+
+        .success {
+            color: var(--success-green);
         }
-        
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
+
+        .error {
+            color: var(--error-red);
         }
-        
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9ff;
-        }
-        
-        .upload-area:hover {
-            background: #f0f2ff;
-            border-color: #5568d3;
-        }
-        
-        .upload-area.drag-over {
-            background: #e8ebff;
-            border-color: #4557c2;
-        }
-        
-        .file-info {
-            margin-top: 15px;
-            padding: 15px;
-            background: #e8ebff;
-            border-radius: 8px;
+
+        #logConsole {
             display: none;
+            margin-top: 20px;
+            background: var(--lab-dark);
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 450px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            color: #E5E7EB;
+            border: 1px solid #333;
         }
-        
-        .file-info.active {
+
+        #logConsole.active {
             display: block;
         }
-        
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        #logConsole .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #333;
+        }
+
+        #logConsole .log-header h3 {
+            margin: 0;
+            color: var(--lab-blue);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        #logConsole .clear-btn {
+            background: var(--error-red);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            position: relative;
         }
-        
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+
+        #logConsole .clear-btn:hover {
+            background: #DC2626;
+            transform: scale(1.05);
         }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+
+        #logConsole .clear-btn:active {
+            transform: scale(0.95);
         }
-        
-        .results {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f5f5f5;
-            border-radius: 10px;
-            display: none;
+
+        #logContent {
+            line-height: 1.6;
         }
-        
-        .results.active {
-            display: block;
+
+        .log-line {
+            margin-bottom: 6px;
+            padding: 4px 0;
+            line-height: 1.5;
         }
-        
-        .results h3 {
-            color: #333;
-            margin-bottom: 15px;
+
+        .log-info {
+            color: var(--lab-blue);
         }
-        
-        .result-item {
-            background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+
+        .log-success {
+            color: var(--success-green);
         }
-        
-        .result-success {
-            border-left-color: #4caf50;
+
+        .log-error {
+            color: var(--error-red);
         }
-        
-        .result-error {
-            border-left-color: #f44336;
+
+        .log-warning {
+            color: var(--warning-orange);
         }
-        
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+
+        .log-timestamp {
+            color: #6B7280;
+            margin-right: 10px;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .status {
-            text-align: center;
+
+        .info-box {
+            background: #EBF5FF;
             padding: 20px;
-            display: none;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid var(--lab-blue);
         }
-        
-        .status.active {
-            display: block;
+
+        .info-box p {
+            font-size: 13px;
+            color: var(--text-dark);
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: var(--lab-blue);
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏥 LAB</h1>
-            <p>Sistema de Envio TISS Orizon</p>
+            <div class="logo">LAB<span class="logo-dot">.</span></div>
+            <div class="subtitle">Medicina Diagnóstica</div>
         </div>
-        
-        <form id="formEnvio">
-            <div class="form-group">
-                <label>Código Prestador *</label>
-                <input type="text" id="codigoPrestador" value="0000263036" required>
+
+        <div class="content">
+            <div class="info-box">
+                <p>📋 <strong>Sistema de Envio de Anexos TISS</strong></p>
+                <p>• Selecione os arquivos <strong>XML</strong> e <strong>PDF</strong> do lote TISS (ou arquivos <strong>ZIP</strong>)</p>
+                <p>• Arquivos ZIP serão descompactados automaticamente</p>
+                <p>• O sistema irá processar e enviar automaticamente para a Orizon</p>
+                <p>• Acompanhe o status de cada envio no console de logs abaixo</p>
             </div>
-            
-            <div class="form-group">
-                <label>Login *</label>
-                <input type="text" id="login" value="LAB0186" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Senha *</label>
-                <input type="password" id="senha" value="91a2ab8fbdd7884f7e32fd19694712a0" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Registro ANS</label>
-                <input type="text" id="registroAns" value="005711">
-            </div>
-            
-            <div class="form-group">
-                <label>Arquivo XML TISS *</label>
-                <div class="upload-area" id="uploadArea">
-                    <p>📄 Arraste o arquivo XML aqui ou clique para selecionar</p>
-                    <input type="file" id="fileInput" accept=".xml" hidden required>
+
+            <div class="upload-section">
+                <h3 class="section-title">📁 Selecionar Arquivos</h3>
+                <div id="uploadArea">
+                    <h3>Arraste os arquivos aqui</h3>
+                    <p>ou clique para selecionar</p>
+                    <div style="margin-top: 15px;">
+                        <span class="file-type-badge badge-xml">XML</span>
+                        <span class="file-type-badge badge-pdf">PDF</span>
+                        <span class="file-type-badge badge-zip">ZIP</span>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xml,.pdf,.zip" multiple hidden>
                 </div>
-                <div class="file-info" id="fileInfo"></div>
             </div>
-            
-            <button type="submit" class="btn" id="btnProcessar">
-                Processar XML
-            </button>
-        </form>
-        
-        <div class="status" id="status">
-            <div class="loader"></div>
-            <p id="statusText">Processando...</p>
+
+            <div id="fileList"></div>
+
+            <button id="analyzeBtn" class="analyze-btn" disabled>🔍 Analisar XML e Listar Pacientes</button>
+
+            <div id="pacientesSection">
+                <div class="pacientes-header" onclick="togglePacientesDropdown()">
+                    <div class="pacientes-header-left">
+                        <h3>👥 Pacientes Encontrados</h3>
+                        <span class="pacientes-count" id="pacientesCount">0 pacientes</span>
+                        <span class="selection-badge" id="selectionBadge" style="display: none;">0 selecionados</span>
+                    </div>
+                    <span class="dropdown-icon" id="dropdownIcon">▼</span>
+                </div>
+
+                <div class="pacientes-content" id="pacientesContent">
+                    <div class="selection-actions">
+                        <button class="selection-btn" onclick="selectAllPacientes()">✅ Selecionar Todos</button>
+                        <button class="selection-btn" onclick="deselectAllPacientes()">❌ Desmarcar Todos</button>
+                    </div>
+
+                    <div id="pacientesList"></div>
+                </div>
+            </div>
+
+            <button id="processBtn" disabled>🚀 Processar e Enviar Anexos</button>
+
+            <div id="statusSection">
+                <div class="spinner"></div>
+                <p id="statusText">Processando...</p>
+            </div>
+
+            <div id="logConsole">
+                <div class="log-header">
+                    <h3>📊 Console de Logs</h3>
+                    <button class="clear-btn" onclick="clearLogs()" title="Limpar todos os arquivos, pacientes e logs">🧹 Limpar Tudo</button>
+                </div>
+                <div id="logContent"></div>
+            </div>
+
+            <div id="resultsSection">
+                <div id="resultsContent"></div>
+            </div>
         </div>
-        
-        <div class="results" id="results"></div>
     </div>
-    
-    <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const formEnvio = document.getElementById('formEnvio');
-        const status = document.getElementById('status');
-        const statusText = document.getElementById('statusText');
-        const results = document.getElementById('results');
-        let selectedFile = null;
-        
-        // Upload events
-        uploadArea.addEventListener('click', () => fileInput.click());
-        
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('drag-over');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('drag-over');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('drag-over');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) handleFile(files[0]);
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
-        });
-        
-        function handleFile(file) {
-            if (!file.name.toLowerCase().endsWith('.xml')) {
-                alert('Por favor, selecione um arquivo XML');
-                return;
-            }
-            
-            selectedFile = file;
-            fileInfo.innerHTML = `<strong>${file.name}</strong> (${(file.size / 1024).toFixed(2)} KB)`;
-            fileInfo.classList.add('active');
-        }
-        
-        // Form submit
-        formEnvio.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!selectedFile) {
-                alert('Por favor, selecione um arquivo XML');
-                return;
-            }
-            
-            const codigoPrestador = document.getElementById('codigoPrestador').value;
-            const login = document.getElementById('login').value;
-            const senha = document.getElementById('senha').value;
-            const registroAns = document.getElementById('registroAns').value;
-            
-            // Mostrar status
-            status.classList.add('active');
-            results.classList.remove('active');
-            results.innerHTML = '';
-            statusText.textContent = 'Lendo arquivo XML...';
-            
-            try {
-                // Ler conteúdo do XML
-                const xmlContent = await readFileAsText(selectedFile);
-                
-                statusText.textContent = 'Enviando para processamento...';
-                
-                // Enviar para API
-                const response = await fetch('/api/enviar', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        codigo_prestador: codigoPrestador,
-                        login: login,
-                        senha: senha,
-                        registro_ans: registroAns,
-                        xml_content: xmlContent
-                    })
-                });
-                
-                const result = await response.json();
-                
-                // Ocultar status
-                status.classList.remove('active');
-                
-                // Mostrar resultados
-                displayResults(result);
-                
-            } catch (error) {
-                status.classList.remove('active');
-                results.classList.add('active');
-                results.innerHTML = `
-                    <div class="result-item result-error">
-                        <strong>❌ Erro:</strong> ${error.message}
-                    </div>
-                `;
-            }
-        });
-        
-        function readFileAsText(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
-        }
-        
-        function displayResults(result) {
-            results.classList.add('active');
-            
-            if (!result.success) {
-                results.innerHTML = `
-                    <div class="result-item result-error">
-                        <strong>❌ Erro:</strong> ${result.error || 'Erro desconhecido'}
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = `<h3>✅ Resultados</h3>`;
-            html += `<p><strong>Total de pacientes encontrados:</strong> ${result.total_pacientes}</p>`;
-            
-            if (result.pacientes && result.pacientes.length > 0) {
-                result.pacientes.forEach((pac, i) => {
-                    html += `
-                        <div class="result-item result-success">
-                            <strong>Paciente ${i + 1}</strong><br>
-                            Lote: ${pac.numeroLote || 'N/A'}<br>
-                            Guia Prestador: ${pac.numeroGuiaPrestador || 'N/A'}<br>
-                            Guia Operadora: ${pac.numeroGuiaOperadora || 'N/A'}<br>
-                            Carteirinha: ${pac.carteirinha || 'N/A'}<br>
-                            Protocolo: ${pac.numeroProtocolo || 'N/A'}
-                        </div>
-                    `;
-                });
-            }
-            
-            results.innerHTML = html;
-        }
-    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="Script.js"></script>
 </body>
 </html>

@@ -2,7 +2,6 @@
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
-const analyzeBtn = document.getElementById('analyzeBtn');
 const processBtn = document.getElementById('processBtn');
 const statusSection = document.getElementById('statusSection');
 const statusText = document.getElementById('statusText');
@@ -10,14 +9,9 @@ const resultsSection = document.getElementById('resultsSection');
 const resultsContent = document.getElementById('resultsContent');
 const logConsole = document.getElementById('logConsole');
 const logContent = document.getElementById('logContent');
-const pacientesSection = document.getElementById('pacientesSection');
-const pacientesList = document.getElementById('pacientesList');
-const pacientesCount = document.getElementById('pacientesCount');
 
 // Estado da aplicação
 let selectedFiles = [];
-let pacientesData = [];
-let selectedPacientes = new Set();
 
 // Funções de Log
 function addLog(message, type = 'info') {
@@ -30,26 +24,8 @@ function addLog(message, type = 'info') {
 }
 
 function clearLogs() {
-    // Limpar arquivos selecionados
-    selectedFiles = [];
-    pacientesData = [];
-    selectedPacientes.clear();
-
-    // Limpar interface
-    fileList.classList.remove('active');
-    fileList.innerHTML = '';
-    pacientesSection.classList.remove('active');
-    resultsSection.classList.remove('active');
-
-    // Limpar logs
     logContent.innerHTML = '';
-
-    // Atualizar botões
-    updateProcessButton();
-
-    // Adicionar log de limpeza
-    addLog('🧹 Sistema limpo - Arquivos e logs removidos', 'success');
-    addLog('📌 Selecione novos arquivos XML e PDF para processar', 'info');
+    addLog('Console limpo', 'info');
 }
 
 window.clearLogs = clearLogs;
@@ -57,7 +33,6 @@ window.clearLogs = clearLogs;
 // Event Listeners
 uploadArea.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleFileSelect);
-analyzeBtn.addEventListener('click', analyzeXMLFiles);
 processBtn.addEventListener('click', processFiles);
 
 // Drag and Drop
@@ -84,74 +59,32 @@ function handleFileSelect(e) {
     addFiles(files);
 }
 
-async function addFiles(files) {
-    logConsole.classList.add('active');
-
-    for (const file of files) {
-        const fileName = file.name.toLowerCase();
-        const isXML = fileName.endsWith('.xml');
-        const isPDF = fileName.endsWith('.pdf');
-        const isZIP = fileName.endsWith('.zip');
-
-        // Verificar tipo de arquivo
-        if (!isXML && !isPDF && !isZIP) {
-            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML, PDF e ZIP são permitidos.`);
+function addFiles(files) {
+    const validFiles = files.filter(file => {
+        const isXML = file.name.toLowerCase().endsWith('.xml');
+        const isPDF = file.name.toLowerCase().endsWith('.pdf');
+        
+        if (!isXML && !isPDF) {
+            alert(`❌ O arquivo "${file.name}" tem formato inválido.\n✅ Apenas arquivos XML e PDF são permitidos.`);
             addLog(`❌ Arquivo rejeitado: ${file.name} (formato inválido)`, 'error');
-            continue;
+            return false;
         }
-
-        // Se for ZIP, descompactar
-        if (isZIP) {
-            addLog(`📦 Descompactando arquivo ZIP: ${file.name}`, 'info');
-            try {
-                const zip = await JSZip.loadAsync(file);
-                let filesExtracted = 0;
-
-                // Processar cada arquivo dentro do ZIP
-                for (const [filename, zipEntry] of Object.entries(zip.files)) {
-                    if (zipEntry.dir) continue; // Pular diretórios
-
-                    const entryName = filename.toLowerCase();
-                    if (entryName.endsWith('.xml') || entryName.endsWith('.pdf')) {
-                        // Extrair o arquivo como Blob
-                        const blob = await zipEntry.async('blob');
-                        const extractedFile = new File([blob], filename.split('/').pop(), {
-                            type: entryName.endsWith('.xml') ? 'text/xml' : 'application/pdf'
-                        });
-
-                        // Verificar duplicados
-                        const alreadyAdded = selectedFiles.some(f => f.name === extractedFile.name && f.size === extractedFile.size);
-                        if (!alreadyAdded) {
-                            selectedFiles.push(extractedFile);
-                            filesExtracted++;
-                            addLog(`  ✅ Extraído: ${extractedFile.name} (${formatFileSize(extractedFile.size)})`, 'success');
-                        } else {
-                            addLog(`  ⚠️ Já existe: ${extractedFile.name}`, 'warning');
-                        }
-                    }
-                }
-
-                addLog(`📦 ZIP processado: ${filesExtracted} arquivo(s) extraído(s)`, 'success');
-
-            } catch (error) {
-                addLog(`❌ Erro ao descompactar ${file.name}: ${error.message}`, 'error');
-                alert(`❌ Erro ao descompactar o arquivo ZIP: ${file.name}`);
-            }
-            continue;
-        }
-
-        // Verificar duplicados para arquivos normais
+        
+        // Verificar se o arquivo já foi adicionado
         const alreadyAdded = selectedFiles.some(f => f.name === file.name && f.size === file.size);
         if (alreadyAdded) {
             alert(`⚠️ O arquivo "${file.name}" já foi adicionado.`);
             addLog(`⚠️ Arquivo duplicado: ${file.name}`, 'warning');
-            continue;
+            return false;
         }
-
-        selectedFiles.push(file);
+        
         addLog(`✅ Arquivo adicionado: ${file.name} (${formatFileSize(file.size)})`, 'success');
-    }
-
+        return true;
+    });
+    
+    if (validFiles.length === 0) return;
+    
+    selectedFiles = [...selectedFiles, ...validFiles];
     renderFileList();
     updateProcessButton();
 }
@@ -168,30 +101,19 @@ function updateProcessButton() {
     // Verificar se há pelo menos 1 XML e 1 PDF
     const hasXML = selectedFiles.some(f => f.name.toLowerCase().endsWith('.xml'));
     const hasPDF = selectedFiles.some(f => f.name.toLowerCase().endsWith('.pdf'));
-
-    // Botão de análise
-    analyzeBtn.disabled = !hasXML;
-
-    if (!hasXML) {
-        analyzeBtn.textContent = '⚠️ Adicione arquivos XML primeiro';
-    } else {
-        const xmlCount = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml')).length;
-        analyzeBtn.textContent = `🔍 Analisar ${xmlCount} XML e Listar Pacientes`;
-    }
-
-    // Botão de processamento (só ativa se houver pacientes selecionados)
-    processBtn.disabled = !(hasXML && hasPDF && selectedPacientes.size > 0);
-
+    
+    processBtn.disabled = !(hasXML && hasPDF);
+    
     if (selectedFiles.length === 0) {
-        processBtn.textContent = '🚀 Processar e Enviar Anexos';
+        processBtn.textContent = 'Processar e Enviar Anexos';
     } else if (!hasXML) {
         processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo XML';
     } else if (!hasPDF) {
         processBtn.textContent = '⚠️ Adicione pelo menos 1 arquivo PDF';
-    } else if (selectedPacientes.size === 0) {
-        processBtn.textContent = '⚠️ Selecione pelo menos 1 paciente';
     } else {
-        processBtn.textContent = `✨ Processar ${selectedPacientes.size} Paciente(s)`;
+        const xmlCount = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml')).length;
+        const pdfCount = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf')).length;
+        processBtn.textContent = `✨ Processar ${xmlCount} XML + ${pdfCount} PDF`;
     }
 }
 
@@ -203,75 +125,29 @@ function renderFileList() {
     }
 
     fileList.classList.add('active');
-
+    
     const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
     const pdfFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf'));
-
+    
     let html = '';
-
-    // Seção de XMLs
+    
     if (xmlFiles.length > 0) {
-        html += `
-            <div class="file-section-header xml-header" onclick="toggleFileSection('xml')">
-                <div class="file-section-title xml-title">
-                    <span>📄 Arquivos XML</span>
-                    <span class="file-count-badge xml-badge">${xmlFiles.length}</span>
-                </div>
-                <span class="file-dropdown-icon" id="xmlDropdownIcon">▼</span>
-            </div>
-            <div class="file-section-content" id="xmlSectionContent">
-                <div class="file-items-container">
-        `;
-
+        html += '<div style="margin-bottom: 15px;"><strong style="color: #1976d2;">📄 Arquivos XML (' + xmlFiles.length + ')</strong></div>';
         xmlFiles.forEach((file) => {
             const globalIndex = selectedFiles.indexOf(file);
             html += createFileItem(file, globalIndex, '#1976d2');
         });
-
-        html += `
-                </div>
-            </div>
-        `;
     }
-
-    // Seção de PDFs
+    
     if (pdfFiles.length > 0) {
-        html += `
-            <div class="file-section-header pdf-header" onclick="toggleFileSection('pdf')">
-                <div class="file-section-title pdf-title">
-                    <span>📎 Arquivos PDF</span>
-                    <span class="file-count-badge pdf-badge">${pdfFiles.length}</span>
-                </div>
-                <span class="file-dropdown-icon" id="pdfDropdownIcon">▼</span>
-            </div>
-            <div class="file-section-content" id="pdfSectionContent">
-                <div class="file-items-container">
-        `;
-
+        html += '<div style="margin: 20px 0 15px;"><strong style="color: #c62828;">📎 Arquivos PDF (' + pdfFiles.length + ')</strong></div>';
         pdfFiles.forEach((file) => {
             const globalIndex = selectedFiles.indexOf(file);
             html += createFileItem(file, globalIndex, '#c62828');
         });
-
-        html += `
-                </div>
-            </div>
-        `;
     }
-
+    
     fileList.innerHTML = html;
-
-    // Abrir automaticamente as seções após renderizar
-    setTimeout(() => {
-        if (xmlFiles.length > 0) {
-            document.getElementById('xmlSectionContent')?.classList.add('open');
-            document.getElementById('xmlDropdownIcon')?.classList.add('open');
-        }
-        if (pdfFiles.length > 0) {
-            document.getElementById('pdfSectionContent')?.classList.add('open');
-            document.getElementById('pdfDropdownIcon')?.classList.add('open');
-        }
-    }, 100);
 }
 
 function createFileItem(file, index, color) {
@@ -304,205 +180,6 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
-
-// Função para analisar arquivos XML
-async function analyzeXMLFiles() {
-    logConsole.classList.add('active');
-    addLog('='.repeat(60), 'info');
-    addLog('🔍 ANALISANDO ARQUIVOS XML', 'info');
-    addLog('='.repeat(60), 'info');
-
-    const xmlFiles = selectedFiles.filter(f => f.name.toLowerCase().endsWith('.xml'));
-
-    if (xmlFiles.length === 0) {
-        addLog('❌ Nenhum arquivo XML selecionado', 'error');
-        return;
-    }
-
-    analyzeBtn.disabled = true;
-    analyzeBtn.textContent = '⏳ Analisando...';
-    pacientesData = [];
-    selectedPacientes.clear();
-
-    try {
-        for (const xmlFile of xmlFiles) {
-            addLog(`📄 Analisando: ${xmlFile.name}`, 'info');
-
-            const xmlContent = await readFileAsText(xmlFile);
-
-            const response = await fetch('/api/analisar-xml', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    xmlContent: xmlContent
-                })
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                addLog(`❌ Erro ao analisar ${xmlFile.name}: ${error}`, 'error');
-                continue;
-            }
-
-            const result = await response.json();
-
-            if (result.success && result.pacientes) {
-                addLog(`✅ ${result.total} paciente(s) encontrado(s) em ${xmlFile.name}`, 'success');
-                pacientesData.push(...result.pacientes);
-
-                // Pré-selecionar todos os pacientes
-                result.pacientes.forEach((_, index) => {
-                    selectedPacientes.add(pacientesData.length - result.pacientes.length + index);
-                });
-            }
-        }
-
-        addLog('', 'info');
-        addLog(`✅ ANÁLISE CONCLUÍDA - Total: ${pacientesData.length} paciente(s)`, 'success');
-        addLog('='.repeat(60), 'info');
-
-        renderPacientesList();
-        pacientesSection.classList.add('active');
-
-        // Abrir automaticamente o dropdown após análise
-        setTimeout(() => {
-            const pacientesContent = document.getElementById('pacientesContent');
-            const dropdownIcon = document.getElementById('dropdownIcon');
-            pacientesContent.classList.add('open');
-            dropdownIcon.classList.add('open');
-        }, 300);
-
-    } catch (error) {
-        addLog(`❌ Erro ao analisar XMLs: ${error.message}`, 'error');
-    } finally {
-        analyzeBtn.disabled = false;
-        const xmlCount = xmlFiles.length;
-        analyzeBtn.textContent = `🔍 Analisar ${xmlCount} XML e Listar Pacientes`;
-        updateProcessButton();
-    }
-}
-
-// Renderizar lista de pacientes
-function renderPacientesList() {
-    if (pacientesData.length === 0) {
-        pacientesList.innerHTML = '<p style="text-align: center; color: var(--text-light);">Nenhum paciente encontrado</p>';
-        pacientesCount.textContent = '0 pacientes';
-        return;
-    }
-
-    pacientesCount.textContent = `${pacientesData.length} paciente(s)`;
-
-    // Atualizar badge de seleção
-    const selectionBadge = document.getElementById('selectionBadge');
-    if (selectedPacientes.size > 0) {
-        selectionBadge.style.display = 'inline-block';
-        selectionBadge.textContent = `✓ ${selectedPacientes.size} selecionado(s)`;
-    } else {
-        selectionBadge.style.display = 'none';
-    }
-
-    let html = '';
-    pacientesData.forEach((paciente, index) => {
-        const isSelected = selectedPacientes.has(index);
-        html += `
-            <div class="paciente-card ${isSelected ? 'selected' : ''}" onclick="togglePaciente(${index})">
-                <div class="paciente-header">
-                    <h4 class="paciente-nome">👤 ${paciente.nome || 'Nome não informado'}</h4>
-                    <input type="checkbox" class="checkbox-custom" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); togglePaciente(${index})">
-                </div>
-                <div class="paciente-info">
-                    <div class="paciente-info-item">
-                        <span class="paciente-info-label">🎫 Carteirinha:</span>
-                        <span>${paciente.numeroCarteira || paciente.carteirinha || 'N/A'}</span>
-                    </div>
-                    <div class="paciente-info-item">
-                        <span class="paciente-info-label">📝 Guia Prestador:</span>
-                        <span>${paciente.numeroGuiaPrestador || 'N/A'}</span>
-                    </div>
-                    <div class="paciente-info-item">
-                        <span class="paciente-info-label">🏥 Guia Operadora:</span>
-                        <span>${paciente.numeroGuiaOperadora || 'N/A'}</span>
-                    </div>
-                    <div class="paciente-info-item">
-                        <span class="paciente-info-label">📋 Lote:</span>
-                        <span>${paciente.numeroLote || 'N/A'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    pacientesList.innerHTML = html;
-}
-
-// Toggle seleção de paciente
-function togglePaciente(index) {
-    if (selectedPacientes.has(index)) {
-        selectedPacientes.delete(index);
-    } else {
-        selectedPacientes.add(index);
-    }
-    renderPacientesList();
-    updateProcessButton();
-}
-
-// Selecionar todos os pacientes
-function selectAllPacientes() {
-    selectedPacientes.clear();
-    pacientesData.forEach((_, index) => {
-        selectedPacientes.add(index);
-    });
-    renderPacientesList();
-    updateProcessButton();
-    addLog('✅ Todos os pacientes selecionados', 'success');
-}
-
-// Desmarcar todos os pacientes
-function deselectAllPacientes() {
-    selectedPacientes.clear();
-    renderPacientesList();
-    updateProcessButton();
-    addLog('❌ Todos os pacientes desmarcados', 'warning');
-}
-
-// Toggle dropdown de pacientes
-function togglePacientesDropdown() {
-    const pacientesContent = document.getElementById('pacientesContent');
-    const dropdownIcon = document.getElementById('dropdownIcon');
-
-    pacientesContent.classList.toggle('open');
-    dropdownIcon.classList.toggle('open');
-
-    if (pacientesContent.classList.contains('open')) {
-        addLog('📂 Lista de pacientes expandida', 'info');
-    } else {
-        addLog('📁 Lista de pacientes recolhida', 'info');
-    }
-}
-
-// Toggle dropdown de arquivos (XML/PDF)
-function toggleFileSection(type) {
-    const sectionContent = document.getElementById(`${type}SectionContent`);
-    const dropdownIcon = document.getElementById(`${type}DropdownIcon`);
-
-    if (sectionContent && dropdownIcon) {
-        sectionContent.classList.toggle('open');
-        dropdownIcon.classList.toggle('open');
-
-        const isOpen = sectionContent.classList.contains('open');
-        const fileType = type.toUpperCase();
-        addLog(`${isOpen ? '📂' : '📁'} Lista de ${fileType}s ${isOpen ? 'expandida' : 'recolhida'}`, 'info');
-    }
-}
-
-// Expor funções globalmente
-window.togglePaciente = togglePaciente;
-window.selectAllPacientes = selectAllPacientes;
-window.deselectAllPacientes = deselectAllPacientes;
-window.togglePacientesDropdown = togglePacientesDropdown;
-window.toggleFileSection = toggleFileSection;
 
 async function processFiles() {
     if (selectedFiles.length === 0) return;
@@ -638,7 +315,7 @@ async function processFiles() {
             batch.forEach(pdf => {
                 batchPdfs[pdf.name] = pdf.data;
             });
-
+            
             addLog('', 'info');
             addLog(`📤 Enviando lote ${i + 1}/${batches.length} (${batch.length} PDFs)...`, 'warning');
             statusText.textContent = `Enviando lote ${i + 1}/${batches.length}...`;
@@ -753,7 +430,7 @@ async function processFiles() {
     }
 }
 
-async function readFileAsText(file) {
+function readFileAsText(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);

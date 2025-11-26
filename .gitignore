@@ -9,4 +9,5 @@ venv/
 
 # Local files
 enviar_anexos_producao.py
-xml pacientes/
+xml pacientes/backups_aws/*.7z
+backups_aws/*.zip
